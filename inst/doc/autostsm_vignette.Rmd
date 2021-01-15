@@ -1,0 +1,525 @@
+---
+title: "Automatic Structural Time Series Model"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Automatic Structural Time Series Model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = TRUE, include = TRUE, message = FALSE, warning = FALSE, eval = FALSE
+)
+```
+
+`autostm` (Automatic Structural Time Series Model) is designed to automatically detect the appropriate decomposition for a univariate time series into trend, seasonal, and cycle components using a state space approach. The unobserved components are estimated with the Kalman filter and all model parameters are estimated using maximum likelihood. The Kalman filter and smoother are implemented in Rcpp so it is reasonably fast. This package is designed to handle time series multiple seasonalities, seasonalities with fractional periodicities, missing data imputation, and irregularly spaced dates (i.e. daily data with missing data due to weekends and holidays, etc.). 
+
+With ease-of-use in mind, all the user has to do is provide a two column data frame: one column with dates and one column with the univariate time series. Everything else is handled by the algorithm including trend specification, cycle specification, seasonal specification, missing data imputation, anomaly detection, structural break detection, and whether or not to log transform the data. The user can manually set the preferred decomposition if desired, however. All components are assumed to be stochastic, which allows for time-varying trend, cycle, and seasonalities, unless the user specifies otherwise. The user only needs to call `stsm_estimate` to fit the model and `stsm_forecast` to filter and forecast the data. Additionally, the user can call `stsm_detect_anomalies` and `stsm_detect_breaks` to perform anomaly and structural break detection respectively. 
+
+# State Space Model
+
+The model is based on the decomposition
+
+$$
+Y_t = T_t + C_t + S_t + B X_t + e_t
+$$
+
+where $Y_t$ is a univariate time series, $T_t$ is the trend component, $C_t$ is the cycle component, $S_t$ is the seasonal component, $X_t$ is optional exogenous data, and $e_t \sim N(0, \sigma_e^2)$ is the observation error. The seasonal and cycle components are assumed to be of a trigonometric form, while the trend is assumed to be one of three types: a random walk, a random walk with an AR(1) drift, or a double random walk (random walk with a random walk drift). 
+
+For state space model is written as
+$$
+Y_t = A + H \beta + BX + e_t, e_t ~ N(0, R)\\
+\beta_t = D + F \beta_{t-1} + u_t, u_t ~ N(0, Q)
+$$
+
+where the first equation is the observation equation and the second equation is the transition equation. $H$ is the observation matrix and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the unobserved components (trend, seasonal, and cycle), $F$ is the transition matrix, and $Q$ is the transition error-covariance matrix.
+
+## Trend Models
+
+If trend is "random-walk" the trend model is specified as the I(1) process
+$$
+T_t = T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2)
+$$
+
+If trend is "random-walk-drift", the trend model is specified as the I(1) process
+$$
+T_t = M_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
+M_t = \delta + \phi_1 M_{t-1} + n_t, n_t \sim N(0, \sigma_m^2)
+$$
+where $M_t$ is the drift.
+
+If trend is "double-random-walk", the trend model is specified as the I(2) process
+$$
+T_t = M_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
+M_t = M_{t-1} + n_t, n_t \sim N(0, \sigma_m^2)
+$$
+
+## Cycle Model
+
+The cycle is modeled using either the trigonometric process
+
+$$
+\begin{bmatrix}
+c_t \\
+c_t^{*}
+\end{bmatrix} = 
+\rho \begin{bmatrix}
+cos(\lambda) & sin(\lambda) \\
+-sin(\lambda) & cos(\lambda)
+\end{bmatrix}
+\begin{bmatrix}
+c_{t-1} \\
+c_{t-1}^{*}
+\end{bmatrix} + 
+\begin{bmatrix}
+u_t \\
+u_t^{*}
+\end{bmatrix}, u_t, u_t^{*} \sim N(0, \sigma_c^2)
+$$
+where $\lambda$ is the frequency of the cycle and $\rho \in{(0,1)}$ to make the cycle stationary for forecasting purposes, or the ARMA(2,1) process
+
+$$
+\begin{bmatrix}
+c_t \\
+c_{t-1} \\
+e_t
+\end{bmatrix} = 
+\begin{bmatrix}
+\psi_1 & \psi_2 & \theta_1 \\
+1 & 0 & 0 \\
+0 & 0 & 0
+\end{bmatrix}
+\begin{bmatrix}
+c_{t-1} \\
+c_{t-2} \\
+e_{t-1}
+\end{bmatrix} + 
+\begin{bmatrix}
+e_t \\
+0 \\
+e_t
+\end{bmatrix}, 
+e_t \sim N(0, \sigma_c^2)
+$$
+Th ARMA(2,1) specification can have real or complex roots, while the trigonometric specification will only have complex roots. The trigonometric specification is a special case of the ARMA(2,1) specification if it exists but was not detected by wavelet analysis.
+
+If the roots are complex, the dynamics will be damped oscillations about the trend, which may not always be desirable. If the user would like to remove oscillations from the forecast that are caused by the complex roots, the user can specify, `dampen_cycle = TRUE` in `stsm_forecast`. This option will smooth the forecast of the cycle into the trend using a fitted sigmoid curve.
+
+## Seasonal Model
+
+Seasonality is modeled using a Fourier series, which is the sum of sin-cos waves with each wave representing a seasonal pattern. Total seasonality is 
+$$
+s_t = \sum_{j = 1}^{h} s_t^j
+$$
+
+where each season $s_t^j$ is modeled using the trigonometric specification below
+
+$$
+\begin{bmatrix}
+s_t^j \\
+s_t^{j,*}
+\end{bmatrix} = 
+\begin{bmatrix}
+cos(\lambda_j) & sin(\lambda_j) \\
+-sin(\lambda_j) & cos(\lambda_j)
+\end{bmatrix}
+\begin{bmatrix}
+s_{t-1}^j \\
+s_{t-1}^{j,*}
+\end{bmatrix} + 
+\begin{bmatrix}
+w_t^j \\
+w_t^{j,*}
+\end{bmatrix}, w_t^j \sim N(0, \sigma_j^2)
+$$
+where $s_t^{j,*}$ exists by construction and is just an auxiliary variable, $\lambda_j = \frac{2\pi j}{f}$ is the frequency of season $j$, $j$ represents the number of periods per year (i.e. $j = 52$ represents weekly seasonality at 52 periods per year), and $f$ is the frequency of the data (i.e. the number of observations per year). The seasons to include in the model are automatically detected in the algorithm using wavelet analysis. Each $\lambda_j$ is predetermined from wavelet analysis and are not estimated parameters. 
+
+## Model Specification 
+
+The automatic model specification algorithm follows the procedure below. Rather than using brute force selection by checking every possible model combination and selecting the model that minimizes a selection criteria like AIC, which can be computationally intensive and time consuming, the procedure uses a series a statistical tests to determine model specification. However, the user is free to write their own brute force model selection routine from the functions provided in this package.
+
+### Frequency Detection 
+
+The first step is to detect the frequency of the data by examining the sequence of dates provided. If the difference in subsequent dates is closest to 
+
+- 1, then a frequency of 365.25 is used for daily data
+- 7, then a frequency of 52.17857 is used for weekly data
+- 30, then a frequency of 12 is used for monthly data
+- 90, then a frequency of 4 is used for quarterly data
+- 365, then a frequency of 1 used for yearly data
+
+Once the frequency is detected, a sequence of continuous dates is constructed to ensure evenly spaced data. If an observation is missing for any of the dates in the constructed sequence, it is treated as a missing value.
+
+### Trend Detection
+
+The second step is to determine the specification of the trend. This mainly boils down to determining if the data is I(0), I(1), or I(2). To do determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed using the `forecast` package's `ndiffs` function on the seasonal adjusted time series, where the seasonal adjustment is performed by decomposing the time series into a loess trend and seasonal component using the `stl` function. The trend is further split into a smoother trend and the cycle by fitting a loess trend to the `stl` trend using the `loess` function. The number of differences selected is the most agreed upon differences. Next, the Cox-Stuart trend test from the `tsutils` package is preformed on the seasonally adjusted data to determine if the data is trending. However, since this test is sensitive to outliers, outliers in the seasonally adjusted series are detected and replaced using the `forecast`'s package `tsoutliers` function before the test is performed.
+
+If the data is determined to be 
+
+- I(2), then the "double-random-walk" specification is used
+- I(1) with a trend, then the "random-walk-drift" specification is used
+- I(1) without a trend, then the "random-walk" specification is used
+- I(0) and no trend, then the "random-walk" specification is used as an approximation for a constant mean
+
+### Multiplicative vs Additive Detection
+
+The third step is to determine if the model should be based on a multiplicative of additive model. For a multiplicative model, the data must all be positive and satisfy one of two tests. Before the tests are performed, the data is seasonally adjusted using the procedure above.
+
+The model is restricted to multiplicative of additive decomposition, rather than allowing the full range of Box-Cox transformations, so that the decomposition is easy to compare to the original time series. Additive makes the decomposition comparative in levels, multiplicative makes the decomposition comparative in percentages relative to the original time series, but Box-Cox transformations don't have an easy interpretation like this. However, the user can Box-Cox transform the data prior to estimation and specify `multilicative = FALSE` if that method is preferred.
+
+#### Trend Test
+
+The first test is a test of a linear vs exponential trend. This test compares the log likelihood of 1) a linear regression of the seasonally adjusted data vs a linear trend, and 2) a linear regression of the logged seasonally adjusted data vs a linear trend. If the log likelihood of the log model is greater than that of the linear model, then a multiplicative model is used.
+
+#### Seasonal Amplitude Test
+
+The second test is a test for constant seasonal amplitude using the Cox-Stuart dispersion test from the `tsutils` package on the seasonal component from a loess-based seasonal decomposition using the `stl` function. Then, if the seasonal component is determined to have changing amplitude, a multiplicative model is used.
+
+### Seasonality Detection
+
+Wavelet analysis for seasonal detection and frequency selection is performed by regressing a series of sin-cos waves on the detrended data sequentially using the equation
+
+$$
+\tilde{y_t} = \sum_{i = 1}^j (a_j sin(j) + b_j cos(j))
+$$
+
+Selection is performed using forward stepwise regression starting from harmonic 1 to $\lfloor\frac{f}{2}\rfloor$), where $f$ is the frequency of the data. After each iteration, a $\chi^2$ test is performed for the sum of each pair of coefficients, $\chi_j^2 = a_j^2 + b_j^2$, which corresponds to the squared power of each harmonic. Any harmonic that is not statistically significant is discarded before the next iteration so that only statistically significant harmonics are kept at each iteration. After all iterations, the remaining harmonics are selected as the seasonal frequencies that describe the seasonal pattern in the data. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious seasonal frequencies from being included in the model. 
+
+### Cycle Detection 
+
+Wavelet analysis for cycle detection and frequency selection is performed by regressing a series of sin-cos waves on the seasonally adjusted and detrended data individually using the equation
+
+$$
+\tilde{y_t} = a_j sin(j) + b_j cos(j)
+$$
+
+for harmonics $j$ from 0.01 to 0.99 for every 0.01. After each iteration, a $\chi^2$ test is performed for $\chi^2_j = a_j^2 + b_j^2$, which corresponds to the squared power of each harmonic. After all harmonics have been tested, the algorithm looks for local maxima from the power spectrum. The final selection for the cycle frequency corresponds to the harmonic that is a local maxima with the largest statistically significant power. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious cycles from being included in the model. 
+
+The cycle is set to the trigonometric form is a cycle is detected using wavelet analysis. Otherwise is set to the ARMA specification. 
+
+## The Kalman Filter
+
+To estimate the unobserved components ($T_t, C_t, S_t$, and $M_t$), the Kalman filter is utilized. The Kalman filter is a forward two-stage procedure that is the optimal linear filter based on the multivariate normal distribution. The "forwardness" of the filter means that it uses only data up to time $t$ to make an inference on the unobserved components at time $t$ and does peak into the future to make that inference.
+
+### Prediction Stage
+
+The first stage is the prediction stage, which makes predictions on the unobserved components based on information up to time $t-1$. This stage is made up of four equations, the first is the prediction of the unobserved components based on its time series properties
+
+$$
+B_{t|t-1} = \bar{D} + F \beta_{t-1|t-1}
+$$
+
+Second, is the prediction of the covariance matrix of the unobserved components
+
+$$
+P_{t|t-1} = F P_{t_1|t-1} F^{\prime} + Q
+$$
+Third, is the prediction error of the time series of interest
+$$
+\eta_{t|t-1} + Y_t - (A + H \beta_{t|t-1} + BX)
+$$
+
+And finally, we have the variance of the prediction error
+
+$$
+f_{t|t-1} = H P_{t|t-1} H^{\prime} + R
+$$
+
+### Updating Stage
+
+The second stage is the updating stage, which makes predictions based on all information up to time $t$. It consists of three equations. The first equation is the prediction of the unobserved components based on the the full information set
+
+$$
+\beta_{t|t} = B_{t|t-1} + K_t \eta_{t}
+$$
+where $K_t$ is the Kalman gain, which determines the optimal weight to give new information in making predictions about $\beta_t$ and is the second equation
+
+$$
+K_t = P_{t|t-1} H^{\prime} f_{t|t-1}^{-1}
+$$
+The last equation is the updating of the covariance matrix of the unobserved components
+
+$$
+P_{t|t} = P_{t|t-1} + K_t H^{\prime} P_{t|t-1}
+$$
+The seven equations above, make up the full Kalman filter routine. If $Y_t$ is missing for any observation, then 
+
+$$
+B_{t|t} = B_{t|t-1} \\
+P_{t|t} = P_{t|t-1} \\
+K_t = 0 \\
+f_{t|t-1} = \infty
+$$
+
+### Kalman Smoothing
+
+Once the Kalman filter is applied to the data, a smoothing procedure can applied in the backward direction to make a better inference of the unobserved components based on the entire data set. Unlike the filter, the smoother does peak into the future to make an inference on the unobserved components at time $t$. This procedure consists of only two equations. 
+
+The first equation updates the prediction of the unobserved components based on all the available information
+
+$$
+\beta_{t|T} = \beta_{t|t} + P_{t|t} F^{\prime} P_{t|t}^{-1} (\beta_{t+1|T} - \beta_{t+1|t})
+$$
+The second equation updates the covariance matrix of the unobserved components based on all the available information
+
+$$
+P_{t|T} = P_{t|t} + P_{t|t} F^{\prime} P_{t+1|t}^{-1} (P_{t+1|T} - P_{t+1|t}) P_{t+1|t}^{-1 \prime} F P_{t|t}^{\prime}
+$$
+
+
+## Maximum Likelihood Estimation
+
+The model above is estimated using MLE with box constraints. The log likelihood is given by
+
+$$
+ln(L(\theta)) = -\frac{1}{2} \sum_{t=1}^T \ln(|f_{t|t-1}|) - \frac{1}{2}\sum_{t=1}^T \eta_{t|t-1}^{\prime} f_{t|t-1}^{-1} \eta_{t|t-1} 
+$$
+for all values that are not missing. 
+
+## Initial Parameter Values
+
+### Model Prior
+
+Initial parameter values are essential for finding a good model when using maximum likelihood estimation. To this end, the algorithm uses initial parameter values derived from a decomposition using the `stl` function, which acts like the model prior and is represented by 
+
+$$
+Y_t^* = T_t^* + C_t^* + S_t^* + e_t^*
+$$
+
+This function will decompose the time series into trend and seasonality. The seasonality is then further split into the seasonal harmonics by fitted a linear regression on the seasonal Fourier series and extracting the fitted components. Finally, the trend is further split into a smoother trend and the cycle by fitting a loess trend to the `stl` trend using the `loess` function. The drift is then derived by taking the first difference of the trend. 
+
+### Trend and Drift Initial Values
+
+Theese parameters are set initiall to match to the theoretical variance of the model depending on the trend type. If the trend is set to "random-walk" then $\sigma_t = sd(\Delta T_t^{*})$. If the trend is set to "double-random-walk" then $\sigma_t = \sigma_m = sd(\Delta T_t^{*})/sqrt(2)$. If the trend is set to "random-walk-drift", an AR(1) model is fit the drift prior, $\sigma_m$ is set to the standard deviation of the model errors, $\phi_1$ is the set to the estimated AR(1) parameter, and $\sigma_t$ is set to $\sqrt{var(\Delta T_t^*) - \frac{\sigma_m^2}{1 - \phi_1^2}}$ the theoretical variance if the trend is I(1).
+
+### Cycle Initial Values
+
+If the cycle model is set to the ARMA specification or a cycle is not detected, an ARMA(2, 0, 1) process is fit to the cycle prior (with noise added by setting the cycle equal to the seasonal adjusted value minus the trend) to set the parameters for the cycle component. The estimated AR and MA components are then used as the initial parameters. IF the cycle is model is set to the trigonometric specification, $\lambda$ is set to be $\frac{2\pi}{c}$ where $c$ is the estimated cycle period. $\rho$ is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as $\rho$ is in a AR(1) process. Finally, $\sigma_c$ is set to the standard deviation of the model errors.
+
+### Seasonality Initial Values
+
+If seasonality is included, each $\sigma_j$ is set to $sd(\Delta S_t^*)/sqrt(h)$ where h is the number of seasonal harmonics so $var(\Delta S_t^*) = \sum_j \sigma_j^2$
+
+### Remainder
+
+Lastly, $\sigma_e$ is set the the standard deviation of the remainder of the model prior, $sd(e_t^*)$ plus any non-zero covariances between the prior components.
+
+### Unobserved Component Initial Values
+
+The initial values of the unobserved components must also be initialized. These values are not optimized but set in advance to aid in speed. The only value set to optimize is one value for the diagonal of the covariance matrix $P_{0|0}$, which is set to the identity matrix. 
+
+### Box Constraints
+
+The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include startionarity constraints for the cycle, $0 < \rho < 1$ and drift, $-1 < \phi < 1$, as well as $\sigma_x > 0$ for all variance parameters. Trend smoothness constraints
+
+$$
+\sigma_t + \sigma_m < \sigma_e \\
+\sigma_t + \sigma_m < \sigma_c \\
+\sigma_t + \sigma_m < \sum_j \sigma_j
+$$
+
+are also included to ensure that the trend accounts for the least variability among all the components. It can be relaxed by setting `unconstrained = TRUE` in `stsm_estimate`.
+
+## Anomaly Detection
+
+Anomaly detection uses the estimated structural model and the recursive nature of the Kalman filter to detect observations that are outside a given threshold of the model's predicted values for time $t$ given estimates at time $t-1$. The threshold is determined by the forecast error variance of the estimated structural model. Anomalies that are detected can then be replaced with the modeled predicted values if the user wants to replace outliers. 
+
+`stsm_detect_anomalies` will only plot if anomalies are detected and `plot = TRUE`.
+
+The model makes recursive predictions for the j-th step ahead using
+
+$$
+\hat{Y_{t+j}} = H F^j \beta_{t}
+$$
+where the j-step ahead forecast error variance is given by
+
+$$
+FEV = \left(\sum_{i=0}^{j-1} H F^i Q F^{i\prime} H^{\prime}\right) + R 
+$$
+
+## Structural Break Detection
+
+Structural breaks are detected using the `breakpoints` function from the `strucchange` package. It attempts to detect structural breaks in the trend, cycle, and seasonalities based on the estimated structural model. 
+
+If the data has an upward (or downward trend), the algorithm will look for breaks in trend growth. Otherwise, it will look for breaks in the level of the trend. If the growth (or level) is not constant across the entire time series, then a break should be detected
+
+Structural breaks in the cycle are detected using an ARMA(2,1) process, which is the reduced form of the trigonometric specification. Structural breaks in the seasonality is captured by fitting the appropriate Fourier series to the seasonal component determined by the harmonics of the estimated model. If these tests are not stable across the entire time series, then a break will be detected.
+
+`stsm_detect_breaks` will only plot if breaks are detected and `plot = TRUE`.
+
+# Example Usage
+
+Below is an example of how to use this package:
+
+## Case 1: Theoretical data example
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(gridExtra)
+library(autostsm)
+
+set.seed(1024)
+
+#Daily data
+freq = 365.25
+
+#Build the trend and drift
+t = c()
+m = c()
+t[1] = 100
+m[1] = 1
+sig_e = 0.1
+sig_t = 1
+sig_m = 0.1
+sig_s = 0.01
+for(i in 2:3000){
+  m[i] = 0.05 + 0.75*m[i-1] + rnorm(1, 0, sig_m)
+  t[i] = t[i-1] + m[i-1] + rnorm(1, 0, sig_t)
+}
+
+#Build the seasonality including yearly and weekly 
+s1 = sin(2*pi/365.25*(1:length(t))) + rnorm(length(t), 0, sig_s)
+s1 = (s1 - min(s1))/diff(range(s1))*(1.125 - 0.865) + 0.865
+s52 = sin(2*pi/(365.25/52)*(1:length(t))) + rnorm(length(t), 0, sig_s)
+s52 = (s52 - min(s52))/diff(range(s52))*(1.125 - 0.865) + 0.865
+s = s1 + s52
+s = (s - min(s))/diff(range(s))*(1.25 - 0.75) + 0.75
+
+#Build the cyclicality using every 3 years periodicity
+c = sin(2*pi*0.33/365.25*(1:length(t))) + rnorm(length(t), 0, sig_s)
+c = (c - min(c))/diff(range(c))*(1.25 - 0.75) + 0.75
+
+#Build the data using a multiplicative model
+ts = data.table(date = as.Date("2016-01-01") + 1:length(t), 
+                y = t*c*s*exp(rnorm(length(t), 0, sig_e)), 
+                trend = t, seasonal = s, seasonal52 = s52, seasonal1 = s1, cycle = c)
+
+#Create some missing values
+ts[sample(1:nrow(ts), round(0.05*nrow(ts))), "y" := NA]
+
+#View the data
+g1 = ggplot(melt(ts, id.vars = "date", measure.vars = c("y", "trend"))) + 
+  labs(title = "Observed vs Trend") + 
+  geom_line(aes(x = date, y = value, group = variable, color = variable)) + 
+  scale_color_viridis_d() + 
+  theme_minimal() + guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "bottom")
+g2 = ggplot(melt(ts, id.vars = "date", measure.vars = c("cycle"))) + 
+  labs(title = "Cycle") + 
+  geom_line(aes(x = date, y = value, group = variable, color = variable)) + 
+  scale_color_viridis_d() + 
+  theme_minimal() + guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "bottom")
+g3 = ggplot(melt(ts, id.vars = "date", measure.vars = colnames(ts)[grepl("seasonal", colnames(ts))])) + 
+  labs(title = "Seasonal") +
+  geom_line(aes(x = date, y = value, group = variable, color = variable)) + 
+  scale_color_viridis_d() + 
+  theme_minimal() + guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "bottom")
+grid.arrange(g1, g2, g3, layout_matrix = rbind(c(1, 1), c(2, 3)))
+
+#Estimate the model
+stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE])
+
+#Forecast and plot the results
+stsm_fc = stsm_forecast(stsm, y = ts[, c("date", "y"), with = FALSE], n.ahead = floor(stsm$freq)*3, plot = TRUE)
+
+#Detect Anomalies
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE), 
+                by = "date", all = TRUE)
+
+#Detect structural breaks
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE), 
+                by = "date", all = TRUE)
+```
+
+## Case 2: Real data examples
+
+```{r}
+##### Unemployment rate examples #####
+#Not seasonally adjusted
+data("UNRATENSA", package = "autostsm") #From FRED
+UNRATENSA = data.table(UNRATENSA, keep.rownames = TRUE)
+colnames(UNRATENSA) = c("date", "y")
+UNRATENSA[, "date" := as.Date(date)]
+UNRATENSA[, "y" := as.numeric(y)]
+stsm = stsm_estimate(UNRATENSA)
+stsm_fc = stsm_forecast(stsm, UNRATENSA, n.ahead = floor(stsm$freq)*3, plot = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = UNRATENSA, plot = TRUE), 
+                by = "date", all = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = UNRATENSA, plot = TRUE), 
+                by = "date", all = TRUE)
+
+#Seasonally adjusted
+data("UNRATE", package = "autostsm") #From FRED
+UNRATE = data.table(UNRATE, keep.rownames = TRUE)
+colnames(UNRATE) = c("date", "y")
+UNRATE[, "date" := as.Date(date)]
+UNRATE[, "y" := as.numeric(y)]
+stsm = stsm_estimate(UNRATE)
+stsm_fc = stsm_forecast(stsm, y = UNRATE, n.ahead = floor(stsm$freq)*3, plot = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = UNRATE, plot = TRUE), 
+                by = "date", all = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = UNRATE, plot = TRUE), 
+                by = "date", all = TRUE)
+
+##### GDP examples #####
+#Not seasonally adjusted
+data("NA000334Q", package = "autostsm") #From FRED
+NA000334Q = data.table(NA000334Q, keep.rownames = TRUE)
+colnames(NA000334Q) = c("date", "y")
+NA000334Q[, "date" := as.Date(date)]
+NA000334Q[, "y" := as.numeric(y)]
+NA000334Q = NA000334Q[date >= "1990-01-01", ]
+stsm = stsm_estimate(NA000334Q)
+stsm_fc = stsm_forecast(stsm, y = NA000334Q, n.ahead = floor(stsm$freq)*3, plot = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = NA000334Q, plot = TRUE), 
+                by = "date", all = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = NA000334Q, plot = TRUE), 
+                by = "date", all = TRUE)
+
+#Seasonally adjusted
+data("GDP", package = "autostsm") #From FRED
+GDP = data.table(GDP, keep.rownames = TRUE)
+colnames(GDP) = c("date", "y")
+GDP[, "date" := as.Date(date)]
+GDP[, "y" := as.numeric(y)]
+GDP = GDP[date >= "1990-01-01", ]
+stsm = stsm_estimate(GDP)
+stsm_fc = stsm_forecast(stsm, y = GDP, n.ahead = floor(stsm$freq)*3, plot = TRUE, smooth = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = GDP, plot = TRUE), 
+                by = "date", all = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = GDP, plot = TRUE), 
+                by = "date", all = TRUE)
+
+##### S&P 500 example #####
+data("SP500", package = "autostsm") #From FRED
+SP500 = data.table(SP500, keep.rownames = TRUE)
+colnames(SP500) = c("date", "y")
+SP500[, "date" := as.Date(date)]
+SP500[, "y" := as.numeric(y)]
+stsm = stsm_estimate(SP500)
+stsm_fc = stsm_forecast(stsm, y = SP500, n.ahead = floor(stsm$freq)*3, plot = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = SP500, plot = TRUE), 
+                by = "date", all = TRUE)
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = SP500, plot = TRUE),
+                by = "date", all = TRUE)
+```
+
+

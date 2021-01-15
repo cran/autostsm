@@ -1,0 +1,24 @@
+Package: autostsm
+Type: Package
+Title: Automatic Structural Time Series Models
+Version: 1.0
+Date: 2021-01-11
+Author: Alex Hubbard
+Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
+Description: Automatic model selection for structural time series decomposition into trend, cycle, and seasonal components using the Kalman filter. 
+  See Koopman, Siem Jan and Marios Ooms (2012) "Forecasting Economic Time Series Using Unobserved Components Time Series Models <doi:10.1093/oxfordhb/9780195398649.013.0006>.
+License: GPL (>= 2)
+Imports: Matrix (>= 1.2), maxLik (>= 1.4), seastests (>= 0.14),
+        forecast (>= 8.13), lubridate (>= 1.7), tsutils (>= 0.9),
+        ggplot2 (>= 3.3), gridExtra (>= 2.3), strucchange (>= 1.5),
+        imputeTS (>= 3.1), foreach (>= 1.5), doSNOW (>= 1.0), parallel
+        (>= 4.0), zoo (>= 1.8)
+Depends: R (>= 3.5.0), data.table (>= 1.13)
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 7.1.1
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
+NeedsCompilation: yes
+Packaged: 2021-01-12 16:27:39 UTC; alex.hubbard
+Repository: CRAN
+Date/Publication: 2021-01-15 10:00:05 UTC
