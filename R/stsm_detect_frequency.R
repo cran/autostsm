@@ -38,14 +38,23 @@ stsm_detect_frequency = function(y, freq = NULL){
       if(ncol(y[, colnames(y) != datecol, with = FALSE]) > 1){
         stop("Data must be a univariate time series.")
       }
+      if(is.yearmon == FALSE){
+        y[, "day" := weekdays(eval(parse(text = datecol)))]
+      }
       
       datediffs = unique(diff(unlist(unique(y[, c(datecol), with = FALSE]))))
-      freq = datediffs[which.max(tabulate(match(diff(y[, c(datecol), with = FALSE][[1]]), datediffs)))]
-      freq = c(365.25, 365.25/7, 12, 4, 1)[which.min(abs(freq -  c(1, 365.25/7, 365.25/12, 365.25/4, 365.25)))]
       dates = unique(y[, c(datecol), with = FALSE][[1]])
       if(is.yearmon == TRUE){
         dates = unique(zoo::as.yearmon(dates))
       }
+      if(is.null(freq)){
+        freq = datediffs[which.max(tabulate(match(diff(y[, c(datecol), with = FALSE][[1]]), datediffs)))]
+        freq = c(365.25, 365.25/7, 12, 4, 1)[which.min(abs(freq -  c(1, 365.25/7, 365.25/12, 365.25/4, 365.25)))]
+        if(freq == 365.25 & all(!unique(y$day) %in% c("Saturday", "Sunday"))){
+          freq = 365.25/7*5
+        }
+      }
+      suppressWarnings(y[, "day" := NULL])
       y = unlist(y[, colnames(y)[colnames(y) != datecol], with = FALSE])
       rm(datediffs, datecol)
     }else if(length(datecol) > 1){

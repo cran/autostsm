@@ -18,7 +18,7 @@ stsm_detect_trend(y, freq, decomp = "", sig_level = 0.01, prior = NULL)
 \item{prior}{A data table created by stsm_prior}
 }
 \value{
-String of trend type
+list with trend type and logical flag for deterministic trend if the trend is determined to have 0 differencing
 }
 \description{
 Detect trend type

@@ -22,6 +22,7 @@
 stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
   multiplicative = FALSE
   
+  seasonal_adj = trend = NULL
   if(all(stats::na.omit(y) > 0)){
     if(any(is.na(y))){
       y = suppressWarnings(imputeTS::na_kalman(y))
@@ -31,24 +32,24 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
     }else{
       prior = copy(prior)
     }
+    prior[, "seasonal" := y - trend]
     
     if(!all(prior$seasonal == 0)){
       #Test for increasing/decreasing seasonal amplitude
-      multiplicative = (multiplicative | tsutils::coxstuart(prior$seasonal, type = "deviation")$p.value <= sig_level)
+      multiplicative = (multiplicative | tsutils::coxstuart(prior$seasonal, type = "dispersion")$p.value <= sig_level)
     }
     
-    #Test for linear vs exponential trend
+    #PE test for non-nested models and functional form choice: linear vs log model
     prior[, "t" := 1:.N]
-    seasonal_adj = NULL
     if(any(prior$seasonal_adj < 0)){
       prior[, "seasonal_adj" := seasonal_adj + abs(min(seasonal_adj, na.rm = TRUE)) + 1]
     }
     prior = prior[!is.na(seasonal_adj), ]
     lm_lin = stats::lm(seasonal_adj ~ t, prior)
-    lm_log = stats::lm(log(seasonal_adj) ~ t, prior)
-    lm_log = stats::lm(prior$seasonal_adj ~ offset(exp(lm_log$fitted.values)))
-    #Compare LnL (reduced form AIC because same number of parameters)
-    multiplicative = (multiplicative | (stats::logLik(lm_log) > stats::logLik(lm_lin))) 
+    lm_log = stats::update(lm_lin, log(seasonal_adj) ~ t)
+    stat = lmtest::petest(lm_lin, lm_log)$`Pr(>|t|)`
+    #To select log model, the linear model must be rejected while the log model must fail to be rejected
+    multiplicative = (multiplicative | (stat[1] <= sig_level & stat[2] > sig_level))
   }
   return(multiplicative)
 }

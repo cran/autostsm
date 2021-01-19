@@ -225,7 +225,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
              "smooth" := stats::predict(stats::smooth.spline(value))$y, 
              by = "variable"]
       series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-              "shift" := frollapply(abs(value - smooth), align = "center", n = min(as.numeric(strsplit(model$seasons, ",")[[1]])), 
+              "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))), 
                                     FUN = max), 
               by = "variable"]
       series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
@@ -251,6 +251,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     y.fc = c(sp$At[1, ] + sp$Ht %*% t(as.matrix(series[(length(y) + 1):.N, rownames(B_tt), with = FALSE])))
     if(floor(freq) == 365){
       dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
+    }else if(floor(freq) == 260){
+      dates.fc = dates[length(dates)] %m+% lubridate::days(1:ceiling(n.ahead*2))
+      dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
     }else if(floor(freq) == 52){
       dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
     }else if(floor(freq) == 12){

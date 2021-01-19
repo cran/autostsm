@@ -18,14 +18,16 @@ stsm_estimate(
   harmonics = NULL,
   cycle = NULL,
   det_obs = FALSE,
-  det_trend = FALSE,
+  det_trend = NULL,
   det_seas = FALSE,
   det_drift = FALSE,
   det_cycle = FALSE,
   sig_level = 0.01,
   optim_methods = c("BFGS", "NM", "CG", "SANN"),
   maxit = 10000,
-  verbose = FALSE
+  verbose = FALSE,
+  full_seasonal_spectrum = FALSE,
+  seasonal_spectrum = NULL
 )
 }
 \arguments{
@@ -99,6 +101,10 @@ is referred to as a deterministic cycle}
 \item{maxit}{Maximum number of iterations for the optimization}
 
 \item{verbose}{Logical whether to print messages or not}
+
+\item{full_seasonal_spectrum}{Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion}
+
+\item{seasonal_spectrum, }{Vector of seasonal periods to check}
 }
 \value{
 List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification

@@ -4,7 +4,14 @@
 \alias{stsm_detect_seasonality}
 \title{Detect seasonality from the data}
 \usage{
-stsm_detect_seasonality(y, freq, sig_level = 1e-04, prior = NULL)
+stsm_detect_seasonality(
+  y,
+  freq,
+  sig_level = 1e-04,
+  prior = NULL,
+  full = F,
+  spectrum = NULL
+)
 }
 \arguments{
 \item{y}{Univariate time series of data values.}
@@ -14,6 +21,10 @@ stsm_detect_seasonality(y, freq, sig_level = 1e-04, prior = NULL)
 \item{sig_level}{Significance level to determine statistically significant seasonal frequencies}
 
 \item{prior}{A data table created from stsm_prior}
+
+\item{full}{Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion}
+
+\item{spectrum, }{Vector of seasonal periods to check}
 }
 \value{
 Numeric vector of seasonal periodicities

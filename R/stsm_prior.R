@@ -34,6 +34,9 @@ stsm_prior = function(y, freq, decomp = "", harmonics = NULL){
   }else{
     prior = data.table(trend = stats::predict(stats::loess(y ~ t, data.table(y = y)[, "t" := 1:.N])))[, "seasonal" := 0][, "remainder" := y - trend]
   }
+  if(all(prior$seasonal == 0) & ifelse(!is.null(harmonics), length(harmonics) > 0, FALSE)){
+    prior[, "seasonal" := y - trend][, "remainder" := y - trend - seasonal][, "seasonal_adj" := y - seasonal]
+  }
   prior[, "seasonal_adj" := y - seasonal]
   if(grepl("cycle", decomp) | decomp == ""){
     if(!all(prior$seasonal == 0)){
@@ -50,7 +53,7 @@ stsm_prior = function(y, freq, decomp = "", harmonics = NULL){
   prior[, "drift" := trend - shift(trend, type = "lag", n = 1)]
   prior[1, "drift" := 0]
   prior[, "remainder" := y - trend - seasonal - cycle]
-  if(!is.null(harmonics) | length(harmonics)){
+  if(ifelse(!is.null(harmonics), length(harmonics) > 0, FALSE)){
     ff = data.table(seasonal = prior$seasonal, t = 1:nrow(prior))
     for(j in harmonics){
       ff[, paste0("sin", j) := sin(2*pi*j/freq*t)]

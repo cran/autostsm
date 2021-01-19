@@ -64,6 +64,8 @@
 #' @param verbose Logical whether to print messages or not
 #' @param unconstrained Logical whether to remove inequality constraints on the trend during estimation
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
+#' @param full_seasonal_spectrum Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion
+#' @param seasonal_spectrum, Vector of seasonal periods to check
 #' @import data.table
 #' @useDynLib autostsm, .registration=TRUE
 #' @return List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification
@@ -83,10 +85,11 @@
 #' @export
 stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
                          multiplicative = NULL, par = NULL, seasons = NULL, harmonics = NULL, cycle = NULL,
-                         det_obs = FALSE, det_trend = FALSE, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
-                         sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE){
-  #exo = freq = decomp = trend = multiplicative = par = seasons = harmonics = cycle = NULL
-  #det_obs = det_trend = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
+                         det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
+                         sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE,
+                         full_seasonal_spectrum = FALSE, seasonal_spectrum = NULL){
+  #exo = freq = decomp = trend = multiplicative = par = seasons = harmonics = cycle = seasonal_spectrum = det_trend = NULL
+  #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = full_seasonal_spectrum = FALSE
   #sig_level = 0.01
   #optim_methods = "BFGS"
   #maxit = 10000
@@ -134,6 +137,13 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       message("Detecting the trend type...")
     }
     trend = stsm_detect_trend(y, freq, sig_level = sig_level)
+    if(is.null(det_trend)){
+      det_trend = trend$det_trend
+    }
+    trend = trend$trend
+  }
+  if(is.null(det_trend)){
+    det_trend = FALSE
   }
   
   #Detect multiplicative model
@@ -151,22 +161,29 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   prior = stsm_prior(y, freq)
   
   #Detect seasonality
-  if(is.null(seasons) & ifelse(!is.null(decomp), grepl("seasonal", decomp), TRUE)){
+  if(is.null(seasons) & is.null(harmonics) & ifelse(!is.null(decomp), grepl("seasonal", decomp), TRUE)){
     if(verbose == TRUE){
       message("Detecting seasonality...")
     }
-    seasons = stsm_detect_seasonality(y, freq, sig_level = 0.0001, prior)
+    seasons = stsm_detect_seasonality(y, freq, sig_level = 0.0001, prior, full = full_seasonal_spectrum, spectrum = seasonal_spectrum)
     wavelet = TRUE
+  }else if(is.null(seasons) & !is.null(harmonics)){
+    seasons = freq/harmonics
+    wavelet = FALSE
   }else{
+    seasons = numeric(0)
+    harmonics = numeric(0)
     wavelet = FALSE
   }
-  
+
   #Detect cyclicality
   if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE) & length(y) >= 3*freq){
     if(verbose == TRUE){
       message("Detecting cyclicallity...")
     }
     cycle = stsm_detect_cycle(y, freq, sig_level = 0.0001, prior)
+  }else{
+    cycle = numeric(0)
   }
   
   #Assign the decomposition
@@ -209,7 +226,15 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   
   ##### Set up the initial values for estimation #####
   #Use naive model as the prior
-  prior = stsm_prior(y, freq, decomp, harmonics)
+  if(floor(freq) == 260){
+    #Ensure the weekday and daily model have the same starting values
+    y_use = stsm_detect_frequency(data.table(y = y, date = dates), 365.25)
+    y_use = stsm_build_dates(y_use)
+    prior = stsm_prior(y_use$data, y_use$freq, decomp, harmonics*7/5)
+    rm(y_use)
+  }else{
+    prior = stsm_prior(y, freq, decomp, harmonics)
+  }
   
   #Set the initial parameter values
   if(is.null(par)){
@@ -327,7 +352,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     abs(out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"])
   k = length(out$estimate) - 1
   n = length(y[!is.na(y)])
-  fit = data.table::data.table(trend = trend, freq = freq, 
+  fit = suppressWarnings(data.table(trend = trend, freq = freq, 
                                seasons = paste(seasons, collapse = ", "),
                                harmonics = ifelse(!is.null(harmonics), paste(harmonics, collapse = ", "), NA),
                                cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
@@ -336,7 +361,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
                                AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(length(y) - k - 1),
                                coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
-  )
+  ))
   return(fit)
 }
 

@@ -96,7 +96,7 @@ knitr::opts_chunk$set(
 #  UNRATENSA[, "date" := as.Date(date)]
 #  UNRATENSA[, "y" := as.numeric(y)]
 #  stsm = stsm_estimate(UNRATENSA)
-#  stsm_fc = stsm_forecast(stsm, UNRATENSA, n.ahead = floor(stsm$freq)*3, plot = TRUE)
+#  stsm_fc = stsm_forecast(stsm, UNRATENSA, n.ahead = floor(stsm$freq)*10, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = UNRATENSA, plot = TRUE),
 #                  by = "date", all = TRUE)
@@ -144,7 +144,7 @@ knitr::opts_chunk$set(
 #  GDP[, "y" := as.numeric(y)]
 #  GDP = GDP[date >= "1990-01-01", ]
 #  stsm = stsm_estimate(GDP)
-#  stsm_fc = stsm_forecast(stsm, y = GDP, n.ahead = floor(stsm$freq)*3, plot = TRUE, smooth = TRUE)
+#  stsm_fc = stsm_forecast(stsm, y = GDP, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = GDP, plot = TRUE),
 #                  by = "date", all = TRUE)

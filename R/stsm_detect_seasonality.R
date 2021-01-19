@@ -3,6 +3,8 @@
 #' @param y Univariate time series of data values.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily))
 #' @param sig_level Significance level to determine statistically significant seasonal frequencies
+#' @param full Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion
+#' @param spectrum, Vector of seasonal periods to check
 #' @param prior A data table created from stsm_prior
 #' @import data.table
 #' @return Numeric vector of seasonal periodicities
@@ -19,7 +21,7 @@
 #' seasonality = stsm_detect_seasonality(y = NA000334Q$y, freq = 4)
 #' }
 #' @export
-stsm_detect_seasonality = function(y, freq, sig_level = 0.0001, prior = NULL){
+stsm_detect_seasonality = function(y, freq, sig_level = 0.0001, prior = NULL, full = F, spectrum = NULL){
   #Get naive model
   if(is.null(prior)){
     prior = stsm_prior(y, freq) 
@@ -28,15 +30,39 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.0001, prior = NULL){
   }
   
   #Adjust the seasonal value
-  trend = rn = `t value` = power = df = pval = . = NULL
-  prior[, "seasonal" := y - trend]
+  s = round = diff = trend = cycle = rn = `t value` = power = df = pval = . = NULL
+  prior[, "seasonal" := y - trend - cycle]
+  if(tsutils::coxstuart(stats::na.omit(prior$seasonal), type = "dispersion")$p.value <= 0.01){
+    prior[, "cycle" := cycle/trend + 1]
+    prior[, "seasonal" := y/(cycle*trend)]
+  }
   prior[, "t" := 1:.N]
   
   #Wavelet analysis for seasonality using forward stepwise regression starting from harmonic 1 to floor(freq/2)
-  for(i in 1:floor(freq/2)){
+  if(full == F & is.null(spectrum)){
+    if(floor(freq) == 365){
+      #weekend, weekday, weekly, yearly
+      spectrum = c(2, 5, 7, freq)
+    }else if(floor(freq) == 260){
+      #weekly, yearly
+      spectrum = c(5, freq)
+    }else if(floor(freq) == 52){
+      #yearly
+      spectrum = c(freq)
+    }else if(floor(freq) == 12){
+      #yearly
+      spectrum = c(freq) 
+    }else if(floor(freq) == 4){
+      #semi-yearly, yearly
+      spectrum = c(freq) 
+    }
+  }else{
+    spectrum = c(2:floor(freq), freq)
+  }
+  for(i in rev(spectrum)){
     #Build the ith harmonic
-    prior[, paste0("sin", i) := sin(2*pi*i/freq*t)]
-    prior[, paste0("cos", i) := cos(2*pi*i/freq*t)]
+    prior[, paste0("sin", freq/i) := sin(2*pi*1/i*t)]
+    prior[, paste0("cos", freq/i) := cos(2*pi*1/i*t)]
     
     #Linear regression for cycle ~ harmonics
     lm = stats::lm(seasonal ~ ., prior[, c("seasonal", colnames(prior)[grepl("sin|cos", colnames(prior))]), with = FALSE])
@@ -62,25 +88,16 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.0001, prior = NULL){
       if(seastests::wo(stats::ts(suppressWarnings(imputeTS::na_kalman(y)), frequency = floor(freq)))$stat){
         seasonal.periods = unique(c(freq, freq/harmonics))
       }else{
-        seasonal.periods = NULL
+        seasonal.periods = unique(freq/harmonics)
       }
     }else{
       seasonal.periods = unique(freq/harmonics)
     }
   }
   
-  #Reset whole numbers to their decimal year value
-  if(floor(freq) == 365){
-    seasonal.periods[which.min(abs(seasonal.periods - 365))] = 365.25 #yearly
-    seasonal.periods[which.min(abs(seasonal.periods - 90))] = 365.25/4 #quarterly
-    seasonal.periods[which.min(abs(seasonal.periods - 30))] = 365.25/12 #monthly
-    seasonal.periods[which.min(abs(seasonal.periods - 7))] = 7 #weekly
-  }
-  if(floor(freq) == 52){
-    seasonal.periods[which.min(abs(seasonal.periods - 52))] = 365.25/7 #yearly
-    seasonal.periods[which.min(abs(seasonal.periods - 13))] = (365.25/7)/4 #quarterly
-    seasonal.periods[which.min(abs(seasonal.periods - 4))] = (365.25/7)/12 #monthly
-  }
+  #Reduce the dimensionality
+  seasonal.periods = data.table(s = seasonal.periods)[, "round" := round(s)][, "diff" := abs(s - round)]
+  seasonal.periods = seasonal.periods[seasonal.periods[, .I[which.min(diff)], by = "round"]$V1, ]$s
   
   return(seasons = unique(seasonal.periods))
 }

@@ -30,6 +30,15 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.0001, prior = NULL){
   #Redefine the cycle value
   seasonal = trend = power = harmonic = slope = pval = . = NULL
   prior[, "cycle" := y - seasonal - trend]
+  if(tsutils::coxstuart(stats::na.omit(prior$cycle), type = "dispersion")$p.value <= 0.01){
+    if(!all(prior$seasonal == 0)){
+      #Convert the seasonal component to a multiplicative factor
+      prior[, "seasonal" := seasonal/trend + 1]
+      prior[, "cycle" := y/(seasonal*trend)]
+    }else{
+      prior[, "cycle" := y/trend]
+    }
+  }
   prior[, "t" := 1:.N]
   
   #Wavelet analysis for the cycle

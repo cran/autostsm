@@ -27,6 +27,9 @@ stsm_build_dates = function(y){
   #Make sure data is not skipping dates
   if(floor(y$freq) == 365){
     dates2 = seq(lubridate::ymd(min(dates)), lubridate::ymd(max(dates)), by = "day")
+  }else if(floor(y$freq) == 260){
+    dates2 = seq(lubridate::ymd(min(dates)), lubridate::ymd(max(dates)), by = "day")
+    dates2 = dates2[which(!weekdays(dates2) %in% c("Saturday", "Sunday"))]
   }else if(floor(y$freq) == 52){
     dates2 = seq(lubridate::ymd(min(dates)), lubridate::ymd(max(dates)), by = "week")
   }else if(floor(y$freq) == 12){
@@ -41,6 +44,11 @@ stsm_build_dates = function(y){
     dt = data.table(date = dates, y = y$data)
     date_dt = data.table(date = dates2)
     dt = merge(date_dt, dt, all = TRUE, by = "date")
+    if(floor(y$freq) == 260){
+      dt[, "day" := weekdays(date)]
+      dt = dt[!date %in% c("Saturday", "Sunday"), ]
+      dt[, "day" := NULL]
+    }
     y$data = dt$y
     y$dates = dt$date
     rm(dt, date_dt)
