@@ -10,8 +10,9 @@ stsm_init_vals(
   freq,
   trend,
   decomp = "",
-  harmonics = NULL,
-  prior = NULL
+  seasons = NULL,
+  prior = NULL,
+  cycle = NULL
 )
 }
 \arguments{
@@ -25,9 +26,11 @@ stsm_init_vals(
 
 \item{decomp}{Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")}
 
-\item{harmonics}{The harmonics to split the seasonality into}
+\item{seasons}{The seasonal periods to split the seasonality into}
 
 \item{prior}{A data table created by stsm_prior}
+
+\item{cycle}{The cycle period}
 }
 \value{
 list containing the initial values for the Kalman filter

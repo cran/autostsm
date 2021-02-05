@@ -20,9 +20,10 @@
 #' }
 #' @export
 stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
+  #Bind data.table variables to the global environment
+  seasonal_adj = trend = NULL
   multiplicative = FALSE
   
-  seasonal_adj = trend = NULL
   if(all(stats::na.omit(y) > 0)){
     if(any(is.na(y))){
       y = suppressWarnings(imputeTS::na_kalman(y))
@@ -32,11 +33,13 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
     }else{
       prior = copy(prior)
     }
-    prior[, "seasonal" := y - trend]
+    prior[, "seasonalcycle" := y - trend]
+    ol = forecast::tsoutliers(stats::ts(prior$seasonalcycle, frequency = freq))
+    prior[ol$index, "seasonalcycle" := ol$replacements]
     
-    if(!all(prior$seasonal == 0)){
+    if(!all(prior$seasonalcycle == 0)){
       #Test for increasing/decreasing seasonal amplitude
-      multiplicative = (multiplicative | tsutils::coxstuart(prior$seasonal, type = "dispersion")$p.value <= sig_level)
+      multiplicative = (multiplicative | tsutils::coxstuart(stats::na.omit(prior$seasonalcycle), type = "dispersion")$p.value <= sig_level)
     }
     
     #PE test for non-nested models and functional form choice: linear vs log model

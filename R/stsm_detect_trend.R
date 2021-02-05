@@ -5,6 +5,8 @@
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
 #' @param sig_level Significance level to determine statistically significant seasonal frequencies
 #' @param prior A data table created by stsm_prior
+#' @param seasons The seasonal periods
+#' @param cycle The cycle period
 #' @import data.table
 #' @return list with trend type and logical flag for deterministic trend if the trend is determined to have 0 differencing
 #' @examples
@@ -20,37 +22,57 @@
 #' trend = stsm_detect_trend(y = NA000334Q$y, freq = 4)
 #' }
 #' @export
-stsm_detect_trend = function(y, freq, decomp = "", sig_level = 0.01, prior = NULL){
+stsm_detect_trend = function(y, freq, decomp = "", sig_level = 0.01, prior = NULL, seasons = NULL, cycle = NULL){
+  #Bind data.table variables to the global environment
+  N = d = test = pval = sig = trend = remainder = NULL
+  
+  #Set the prior
   if(is.null(prior)){
-    prior = stsm_prior(y, freq, decomp) 
+    prior = stsm_prior(y, freq, decomp, seasons, cycle) 
   }else{
     prior = copy(prior)
   }
+  prior[, "seasonal_adj" := trend + remainder]
   
   ##### Find the number of differences to make it stationary #####
   #Replace outliers for the trend test
-  N = NULL
   ol = forecast::tsoutliers(stats::ts(prior$seasonal_adj, frequency = freq))
   prior[ol$index, "seasonal_adj" := ol$replacements]
   #Test for a trend
   trend_test = (tsutils::coxstuart(stats::na.omit(prior$seasonal_adj), type = "trend")$p.value <= sig_level)
-  ndiffs = sapply(c("adf", "pp", "kpss"), function(x){forecast::ndiffs(prior$seasonal_adj, type = "level", alpha = sig_level, max.d = 2)})
-  #Find the most agreed upon differences
-  ndiffs = data.table(ndiffs)[, .N, by = "ndiffs"]
-  #Default to 1 difference if exists, then 2, then the most frequent which is likely to be 0
-  ndiffs = ndiffs[N == max(N), ]
-  #If there is a tie
-  ndiffs = ifelse(1 %in% ndiffs$ndiffs, 1,
-                  ifelse(2 %in% ndiffs$ndiffs, 2, 
-                         ndiffs[1, ]$ndiffs))
+  #Calculate unit root tests for differences 0 to 2
+  ndiffs = data.table(d = rep(0:2, 3), test = unlist(lapply(c("adf", "pp", "kpss"), rep, 3)))
+  for(nd in ndiffs$d){
+    if(nd == 0){
+      x = stats::na.omit(prior$seasonal_adj)
+    }else{
+      x = stats::na.omit(diff(prior$seasonal_adj, differences = nd))
+    }
+    suppressWarnings(ndiffs[d == nd & test == "adf", "pval" := tseries::adf.test(x, alternative = "stationary")$p.value])
+    suppressWarnings(ndiffs[d == nd & test == "pp", "pval" := tseries::pp.test(x, alternative = "stationary")$p.value])
+    suppressWarnings(ndiffs[d == nd & test == "kpss", "pval" := tseries::kpss.test(x, null = "Level")$p.value])
+  }
+  ndiffs[test %in% c("adf", "pp"), "sig" := pval <= sig_level]
+  ndiffs[test == "kpss", "sig" := pval > sig_level]
+  ndiffs = ndiffs[ndiffs[sig == TRUE, .I[which.min(pval)], by = "test"]$V1, ]
+  if(nrow(ndiffs) == 0){
+    ndiffs = 2
+  }else{
+    #Find the most agreed upon differences
+    ndiffs = ndiffs[, .N, by = "d"][N == max(N), ]
+    #If there is a tie, default to 1 difference if exists, then 2, then the most frequent which is likely to be 0
+    ndiffs = ifelse(1 %in% ndiffs$d, 1, ifelse(2 %in% ndiffs$d, 2, ndiffs[1, ]$d))
+  }
   if(ndiffs >= 2){
     trend = "double-random-walk"
-  }else if((ndiffs == 1) & trend_test == TRUE){
+  }else if(ndiffs == 1 & trend_test == TRUE){
     trend = "random-walk-drift"
-  }else if((ndiffs == 1) & trend_test == FALSE){
+  }else if(ndiffs == 1 & trend_test == FALSE){
     trend = "random-walk"
-  }else if(ndiffs == 0){
+  }else if(ndiffs == 0 & trend_test == FALSE){
     trend = "random-walk"
+  }else if(ndiffs == 0 & trend_test == TRUE){
+    trend = "random-walk-drift"
   }
   
   return(list(trend = trend, det_trend = (ndiffs == 0)))

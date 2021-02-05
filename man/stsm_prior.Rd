@@ -4,7 +4,7 @@
 \alias{stsm_prior}
 \title{Return a naive model prior decomposition}
 \usage{
-stsm_prior(y, freq, decomp = "", harmonics = NULL)
+stsm_prior(y, freq, decomp = "", seasons = NULL, cycle = NULL)
 }
 \arguments{
 \item{y}{an object created from stsm_detect_frequency}
@@ -13,7 +13,9 @@ stsm_prior(y, freq, decomp = "", harmonics = NULL)
 
 \item{decomp}{decomposition string}
 
-\item{harmonics}{The harmonics to split the seasonality into}
+\item{seasons}{The seasonal periods to split the seasonality into}
+
+\item{cycle}{The cycle periods}
 }
 \value{
 data table containing a naive decomposition using STL

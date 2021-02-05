@@ -20,7 +20,10 @@
 #' }
 #' @export
 stsm_detect_cycle = function(y, freq, sig_level = 0.0001, prior = NULL){
-  #Get naive seasonal model
+  #Bind data.table variables to the global environment
+  seasonal = trend = power = harmonic = slope = pval = . = NULL
+  
+  #Get the prior
   if(is.null(prior)){
     prior = stsm_prior(y, freq) 
   }else{
@@ -28,16 +31,9 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.0001, prior = NULL){
   }
   
   #Redefine the cycle value
-  seasonal = trend = power = harmonic = slope = pval = . = NULL
-  prior[, "cycle" := y - seasonal - trend]
+  prior[, "cycle" := y - trend]
   if(tsutils::coxstuart(stats::na.omit(prior$cycle), type = "dispersion")$p.value <= 0.01){
-    if(!all(prior$seasonal == 0)){
-      #Convert the seasonal component to a multiplicative factor
-      prior[, "seasonal" := seasonal/trend + 1]
-      prior[, "cycle" := y/(seasonal*trend)]
-    }else{
-      prior[, "cycle" := y/trend]
-    }
+    prior[, "cycle" := y/trend]
   }
   prior[, "t" := 1:.N]
   
@@ -48,7 +44,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.0001, prior = NULL){
     prior[, paste0("sin", i) := sin(2*pi*i/freq*t)]
     prior[, paste0("cos", i) := cos(2*pi*i/freq*t)]
     
-    #Linear regression for cycle ~ harmonics
+    #Linear regression for cycle ~ fourier series
     lm = stats::lm(cycle ~ ., prior[, c("cycle", colnames(prior)[grepl("sin|cos", colnames(prior))]), with = FALSE])
     
     #Standardize the coefficient value for the Chi-square test
@@ -68,7 +64,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.0001, prior = NULL){
   harmonics = wave[(shift(power, type = "lag", n = 1) < power & shift(power, type = "lead", n = 1) < power) &
                      (shift(sign(slope), type = "lag", n = 1) == 1 & shift(sign(slope), type = "lead", n = 1) == -1), ][
                        pval <= sig_level, ]$harmonic
-  #Cycle must be 3 years or longer (use 2.5 for estimation uncertainty) and must have at enough data to observe 2.5 cycles
+  #Cycle must be 3 years or longer (use 2.5 for estimation uncertainty) and must have enough data to observe 2.5 cycles
   cycle.period = wave[harmonic %in% harmonics, ][harmonic > 2.5*freq/length(y) & harmonic < 1/2.5, ][which.max(power), ]$harmonic
   
   return(cycle = freq/cycle.period)

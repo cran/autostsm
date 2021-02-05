@@ -10,7 +10,7 @@ stsm_init_pars(
   trend,
   cycle,
   decomp = "",
-  harmonics = NULL,
+  seasons = NULL,
   prior = NULL
 )
 }
@@ -25,7 +25,7 @@ stsm_init_pars(
 
 \item{decomp}{Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")}
 
-\item{harmonics}{The harmonics to split the seasonality into}
+\item{seasons}{The seasonal lengths to split the seasonality into}
 
 \item{prior}{A data table created by stsm_prior}
 }

@@ -6,7 +6,6 @@
 #'
 #' @param par Vector of named parameter values, includes the harmonics
 #' @param yt Univariate time series of data values
-#' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily))
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
 #' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likielhood.
 #' "random-walk" is the random walk trend.
@@ -31,11 +30,10 @@
 #' ssm = stsm_ssm(model = stsm)
 #' }
 #' @export
-stsm_ssm = function(par = NULL, yt = NULL, freq = NULL, decomp = NULL,
+stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
                     trend = NULL, init = NULL, model = NULL){
   if(!is.null(model)){
     par = eval(parse(text = paste0("c(", model$coef, ")")))
-    freq = model$freq
     trend = model$trend
     decomp = model$decomp
   }
@@ -131,11 +129,11 @@ stsm_ssm = function(par = NULL, yt = NULL, freq = NULL, decomp = NULL,
     for(j in jiter) {
       colnames = colnames(Fm)
       rownames = rownames(Fm)
-      Sm = rbind(c(cos(2*pi*j/freq), sin(2*pi*j/freq)),
-                 c(-sin(2*pi*j/freq), cos(2*pi*j/freq)))
+      Sm = rbind(c(cos(2*pi*1/j), sin(2*pi*1/j)),
+                 c(-sin(2*pi*1/j), cos(2*pi*1/j)))
       Fm = as.matrix(Matrix::bdiag(Fm, Sm))
-      colnames(Fm) = c(colnames, paste0("Stl", round(j)), paste0("Stls", round(j)))
-      rownames(Fm) = c(rownames, paste0("St", round(j)), paste0("Sts", round(j)))
+      colnames(Fm) = c(colnames, paste0("Stl", j), paste0("Stls", j))
+      rownames(Fm) = c(rownames, paste0("St", j), paste0("Sts", j))
     }
     Hm = cbind(Hm, matrix(rep(c(1, 0), length(jiter)), nrow = 1))
     colnames(Hm) = rownames(Fm)
@@ -173,7 +171,7 @@ stsm_ssm = function(par = NULL, yt = NULL, freq = NULL, decomp = NULL,
   }else if(!is.null(init)){
     P0 = init[["P0"]]
   }else{
-    P0 = diag(ifelse(ncol(yt) > 2, stats::var(yt, na.rm = TRUE), 100), nrow = nrow(Fm), ncol = nrow(Fm))
+    P0 = diag(ifelse(ncol(yt) > 2, stats::var(c(yt), na.rm = TRUE), 100), nrow = nrow(Fm), ncol = nrow(Fm))
     rownames(P0) = colnames(P0) = rownames(Fm)
   }
   return(list(B0 = B0, P0 = P0, At = Am, Dt = Dm, Ht = Hm, Ft = Fm, Rt = Rm, Qt = Qm, beta = beta))

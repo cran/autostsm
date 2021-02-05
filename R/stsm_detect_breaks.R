@@ -11,6 +11,7 @@
 #' @param ci Confidence interval, value between 0 and 1 exclusive.
 #' @param smooth Whether or not to use the Kalman smoother
 #' @param cores Number of cores to use for break detection
+#' @param show_progress Whether to show progress bar
 #' @return data table (or list of data tables) containing the dates of detected anomalies from the filtered and/or smoothed series
 #' @import ggplot2 data.table foreach
 #' @useDynLib autostsm, .registration=TRUE
@@ -29,24 +30,64 @@
 #' }
 #' @export
 stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "seasonal"), freq = NULL, exo = NULL, 
-                              sig_level = 0.01, ci = 0.8, smooth = TRUE, plot = FALSE, cores = NULL){
+                              sig_level = 0.01, ci = 0.8, smooth = TRUE, plot = FALSE, cores = NULL, show_progress = FALSE){
   #model = stsm
   #sig_level = 0.01
   #ci = 0.8
   #plot = smooth = TRUE
   #freq = exo = cores = NULL
   #components = c("trend", "cycle", "seasonal")
+  #stsm_build_dates = autostsm:::stsm_build_dates
+  #stsm_init_vals = autostsm:::stsm_init_vals
+  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  
+  #Bind data.table variables to the global environment
+  break_type = date.lag = date.lead = variable = j = x = value = 
+    breakpoints = Estimate = `Std. Error` = lower = upper = 
+    Tt0_interval_lower = Tt0_interval_upper = . = test_val = 
+    V2 = lwr = upr = group = lwr_sig = upr_sig = break_type2 = 
+    interval_end = start = end = segment = Period = season = text = 
+    Ct_amp_interval_lower = Ct_amp_interval_upper = NULL
+  
+  #Argument checks
   if(!is.logical(plot)){
     stop("plot must be TRUE or FALSE")
   }
   if(sig_level < 0 | sig_level > 0.1){
-    stop("sig_level must be positive and <= 0.1")
+    stop("sig_level must be > 0 and <= 0.1")
   }
   if(ci <= 0 | ci >= 1){
     stop("ci must between 0 and 1. Suggested values are 0.8, 0.9, 0.95, 0.99.")
   }
   if(any(!components %in% c("trend", "cycle", "seasonal"))){
     stop("components must be 'trend', 'cycle', or 'seasonal'")
+  }
+  if(!all(sapply(c(smooth, plot, show_progress), is.logical))){
+    stop("smooth, plot, show_progress must be logical")
+  }
+  if(!is.null(exo)){
+    if(!(is.data.frame(exo) | is.data.table(exo))){
+      stop("exo must be a data frame or data table")
+    }
+  }
+  if(!(is.data.frame(y) | is.data.table(y) | stats::is.ts(y))){
+    stop("y must be a data frame or data table")
+  }else{
+    y = as.data.table(y)
+    if(ncol(y) != 2){
+      stop("y must have two columns")
+    }else if(!all(unlist(lapply(colnames(y), function(x){class(y[, c(x), with = FALSE][[1]])})) %in% 
+                  c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+      stop("y must have a date and numeric column")
+    }
+  }
+  if(!all(components %in% c("trend", "cycle", "seasonal"))){
+    stop("components must be trend, cycle, seasonal.")
+  }
+  if(!is.null(freq)){
+    if(!is.numeric(freq)){
+      stop("freq must be numeric")
+    }
   }
   
   #Get the frequency of the data
@@ -91,22 +132,27 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   #Get model specifications
   decomp = model$decomp
   trend = model$trend
-  if(!is.na(model$harmonics)){
-    harmonics = as.numeric(strsplit(model$harmonics, ", ")[[1]])
+  if(!is.na(model$seasons)){
+    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
   }else{
-    harmonics = c()
+    seasons = c()
+  }
+  if(!is.na(model$cycle)){
+    cycle = model$cycle
+  }else{
+    cycle = c()
   }
   
   #Get the coefficients
   par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, harmonics)
+  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
   
   #Filter and smooth the data
-  sp = stsm_ssm(par = par, yt = y, freq = freq, decomp = decomp, trend = trend, init = init)
-  B_tt = kalman_filter(B0 = matrix(sp$B0, ncol = 1), P0 = sp$P0, Dt = sp$Dt, At = sp$At, Ft = sp$Ft, Ht = sp$Ht, Qt = sp$Qt, Rt = sp$Rt,
-                       yt = matrix(y, nrow = 1), X = X, beta = sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
+  sp = stsm_ssm(par, y, decomp, trend, init)
+  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dt, sp$At, sp$Ft, sp$Ht, sp$Qt, sp$Rt,
+                       matrix(y, nrow = 1), X, sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
   if(smooth == TRUE){
-    B_tt = kalman_smoother(B_tl = B_tt$B_tl, B_tt = B_tt$B_tt, P_tl = B_tt$P_tl, P_tt = B_tt$P_tt, Ft = sp$Ft)$B_tt
+    B_tt = kalman_smoother(B_tt$B_tl, B_tt$B_tt, B_tt$P_tl, B_tt$P_tt, sp$Ft)$B_tt
   }else{
     B_tt = B_tt$B_tt
   }
@@ -115,105 +161,225 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   #Setup parallel computing
   cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), parallel::detectCores() - 1, 2))))
   doSNOW::registerDoSNOW(cl)
+  `%fun%` = foreach::`%dopar%`
   
   #Get the unobserved series
   series = data.table(t(B_tt))
   
   #Detect structural breaks
-  bp_dt = data.table()
-  comps = c("Tt0", "Ct", "St")[c(c("Tt0", "Ct") %in% colnames(series), grepl("seasonal", decomp))]
-  error = break_type = date.lag = date.lead = value = variable = lower = upper = Tt0_interval_lower = 
-    Tt0_interval_upper = Ct_interval_lower = Ct_interval_upper = St_interval_lower = St_interval_upper = . = NULL
-  for(j in comps[comps %in% c("Tt0", "Ct", "St")[c("trend", "cycle", "seasonal") %in% components]]){
+  comps = c("Tt0", "Ct", "St")[c(TRUE, grepl("cycle", decomp), grepl("seasonal", decomp))]
+  
+  #Detect structural breaks
+  combine = function(x, y){
+    return(list(bp_dt = rbind(x[["bp_dt"]], y[["bp_dt"]], use.names = TRUE, fill = TRUE), 
+                series_fit = cbind(x[["series_fit"]], y[["series_fit"]])))
+  }
+  iter = comps[comps %in% c("Tt0", "Ct", "St")[c("trend", "cycle", "seasonal") %in% components]]
+  if(show_progress == TRUE){
+      pb = progress::progress_bar$new(
+        format = " [:bar] :percent complete |:elapsed elapsed |:eta remaining ",
+        total = length(iter),  
+        clear = FALSE, show_after = 0
+    )
+    invisible(pb$tick(0))
+    progress = function(n){pb$tick()}
+  }else{
+    progress = NULL
+  }
+  out = foreach::foreach(j = iter, .combine = combine, 
+                         .packages = c("data.table", "forecast", "strucchange", "stats", "tsutils", "foreach", "doSNOW", "parallel"),
+                         .options.snow = list(progress = progress)) %fun% {
+    bp_dt = data.table()
+    series_fit = data.table()
     if(j == "Tt0"){
+      #Trend break test
       dat = series[, c(j), with = FALSE][[1]]
       #Test if trend is trending up/down to test for breaks in growth, if not then breaks in level
       ol = forecast::tsoutliers(stats::ts(dat, frequency = freq))
       dat2 = copy(dat)
       dat2[ol$index] = ol$replacements
       if(tsutils::coxstuart(dat2, type = "trend")$p.value <= sig_level){
-        nd = ifelse(model$trend %in% c("random-walk", "random-walk-drift"), 1, 
-                    ifelse(model$trend %in% c("double-random-walk", "random-walk2"), 2, 0))
-        dat_trans = diff(dat, differences = nd)
+        dat_trans = diff(dat)
       }else{
         dat_trans = dat
       }
       h = round(freq) + 2
-      bp = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1, h = ifelse(h > 0.33*length(dat), round(0.33*length(dat)), h), 
-                                                     alpha = sig_level, hpc = "foreach"))
-    }else if(j == "St"){
-      dat = series[, grepl("St", colnames(series)) & !grepl("Sts", colnames(series)), with = FALSE]
-      dat_trans = dat = rowSums(dat)
-      h = round(max(freq/harmonics)) + 2
-      lm.data = data.table(y = dat_trans)[, "t" := 1:.N]
-      for(k in floor(harmonics)){
-        lm.data[, paste0("sin", k) := sin(2*pi*k/freq*t)]
-        lm.data[, paste0("cos", k) := cos(2*pi*k/freq*t)]
-      }
-      lm.data[, "t" := NULL]
-      lm_s = stats::lm(y ~ ., data = lm.data)
-      lm.data = cbind(lm.data, do.call("cbind", lapply(floor(harmonics), function(x){
-        matrix(stats::coef(lm_s)["(Intercept)"]/length(harmonics) + 
-                 c(as.matrix(lm.data[, paste0(c("sin", "cos"), x), with = FALSE]) %*% 
-                     matrix(stats::coef(lm_s)[paste0(c("sin", "cos"), x)], ncol = 1)), 
-               ncol = 1)
-      })))
-      colnames(lm.data)[(ncol(lm.data) - length(harmonics) + 1):ncol(lm.data)] = paste0("St", floor(harmonics))
-      lm.data[, colnames(lm.data)[grepl("sin|cos", colnames(lm.data))] := NULL]
-      bp = suppressWarnings(strucchange::breakpoints(y ~ ., data = lm.data,
-                                                     h = ifelse(h > 0.33*length(dat), round(0.33*length(dat)), h), 
-                                                     alpha = sig_level, hpc = "foreach"))
-    }else if(j == "Ct"){
-      dat_trans = dat = series[, c(j), with = FALSE][[1]]
-      h = ifelse(!is.na(model$cycle), round(model$cycle) + 2, round(freq) + 2)
-      arima = tryCatch(forecast::Arima(y = dat_trans, order = c(2, 0, 1)), 
-                       error = function(err){NULL})
-      lm.data = data.table(y = dat_trans)[, "lag1" := shift(y, type = "lag", n = 1)][, "lag2" := shift(y, type = "lag", n = 2)]
-      if(!is.null(arima)){
-        lm.data[, "error" := arima$residuals][, "error" := shift(error, type = "lag", n = 1)]
-      }else{
-        lm = stats::lm(y ~ lag1 + lag2, data = lm.data)
-        lm.data[(.N - length(lm$residuals) + 1):.N, "error" := lm$residuals][, "error" := shift(error, type = "lag", n = 1)]
-      }
-      bp = suppressWarnings(strucchange::breakpoints(y ~ lag1 + lag2 + error, data = lm.data,
-                                                     h = ifelse(h > 0.33*length(dat), round(0.33*length(dat)), h), 
-                                                     alpha = sig_level, hpc = "foreach"))
-    }
-    
-    if(!all(is.na(bp$breakpoints))){
-      if(j == "Tt0"){
+      bp = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1, hpc = "foreach"))
+      
+      if(!all(is.na(bp$breakpoints))){
+        #Trend break test results
         lm_dat = data.table(y = dat[(length(dat) - length(dat_trans) + 1):length(dat)], 
-                            segment = strucchange::breakfactor(bp, breaks = length(bp$breakpoints)))[, "t" := 1:.N, by = "segment"]
+                            segment = strucchange::breakfactor(bp, breaks = length(bp$breakpoints)))[, "t" := 1:.N]
         lm = stats::lm(y ~ t*segment, lm_dat)
-      }else if(j == "St"){
-        lm_dat = data.table(breakpoints = strucchange::breakfactor(bp, breaks = length(bp$breakpoints)))
-        lm_dat[, "y" := dat[abs(length(dat) - length(lm_dat$breakpoints) + 1):length(dat)]]
-        lm = stats::lm(y ~ breakpoints, lm_dat)
-      }else if(j == "Ct"){
-        lm_dat = data.table(breakpoints = strucchange::breakfactor(bp, breaks = length(bp$breakpoints)))
-        lm_dat[, "y" := dat_trans[abs(length(dat_trans) - length(lm_dat$breakpoints) + 1):length(dat_trans)]]
-        lm = stats::lm(y ~ breakpoints, lm_dat)
+        lm2 = stats::lm(y ~ t, lm_dat)
+        fit = data.table(stats::predict(lm, level = 1 - sig_level, interval = "confidence"), 
+                         stats::predict(lm2, interval = "none"))
+        if(nrow(fit[!(V2 >= lwr & V2 <= upr), ]) > 0){
+          fit = data.table(stats::predict(lm, level = ci, interval = "confidence"))
+          fit = rbind(matrix(NA, nrow = nrow(series) - nrow(fit), ncol = ncol(fit)), fit, use.names = FALSE)
+          colnames(fit) = c(paste0(j, "_interval_mean"), paste0(j, "_interval_lower"), paste0(j, "_interval_upper"))
+          series_fit = cbind(series_fit, fit)
+          bp = tryCatch(suppressWarnings(data.table(stats::confint(bp, level = ci)$confint)), 
+                        error = function(err){temp = data.table(x1 = NA, 
+                                                                breakpoints = bp$breakpoints, 
+                                                                x2 = NA)
+                        colnames(temp)[c(1, 3)] = paste(c(1/2*(1 - ci), 1/2*(1 + ci))*100, "%")
+                        return(temp)})
+          colnames(bp) = gsub(" ", "", colnames(bp))
+          bp[eval(parse(text = paste0("`", colnames(bp)[1], "`"))) < 0, colnames(bp)[1] := 0]
+          bp[eval(parse(text = paste0("`", colnames(bp)[3], "`"))) > nrow(series), colnames(bp)[3] := nrow(series)]
+          bp = bp[, lapply(.SD, function(x){dates[x]})]
+          bp[, "break_type" := "trend"]
+          bp_dt = rbind(bp_dt, bp, use.names = TRUE, fill = TRUE)
+        }
       }
-      fit = data.table(stats::predict(lm, level = ci, interval = "confidence"))
-      fit = rbind(matrix(NA, nrow = nrow(series) - nrow(fit), ncol = ncol(fit)), fit, use.names = FALSE)
-      colnames(fit) = c(paste0(j, "_interval_mean"), paste0(j, "_interval_lower"), paste0(j, "_interval_upper"))
-      series = cbind(series, fit)
-      bp = tryCatch(suppressWarnings(data.table(stats::confint(bp, level = ci)$confint)), 
-                    error = function(err){temp = data.table(x1 = NA, 
-                                                     breakpoints = bp$breakpoints, 
-                                                     x2 = NA)
-                    colnames(temp)[c(1, 3)] = paste(c(1/2*(1 - ci), 1/2*(1 + ci))*100, "%")
-                    return(temp)})
-      colnames(bp) = gsub(" ", "", colnames(bp))
-      bp[eval(parse(text = paste0("`", colnames(bp)[1], "`"))) < 0, colnames(bp)[1] := 0]
-      bp[eval(parse(text = paste0("`", colnames(bp)[3], "`"))) > nrow(series), colnames(bp)[3] := nrow(series)]
-      bp = bp[, lapply(.SD, function(x){dates[x]})]
-      bp[, "break_type" := ifelse(j == "Tt0", "trend", 
-                                  ifelse(j == "St", "seasonal", 
-                                         ifelse(j == "Ct", "cycle")))]
-      bp_dt = rbind(bp_dt, bp, use.names = TRUE, fill = TRUE)
+    }else if(j %in% c("Ct", "St")){
+      #Seasonal/cycle amplitude break test
+      dat = series[, grepl(j, colnames(series)) & !grepl(paste0(j, "s"), colnames(series)), with = FALSE]
+      iter = colnames(dat)
+      if(j == "St"){
+        h = round(max(seasons)) + 2
+      }else if(j == "Ct"){
+        h = ifelse(!is.na(model$cycle), round(model$cycle) + 2, round(freq) + 2)
+      }
+      
+      for(k in iter){
+        dat_trans = abs(dat[, k, with = FALSE][[1]])
+        bp1 = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1,
+                                                       h = min(c(h, round(0.33*length(dat_trans)))), 
+                                                       hpc = "foreach"))
+        
+        if(!all(is.na(bp1$breakpoints))){
+          #Seasonal/cycle break test results
+          lm_dat = data.table(breakpoints = strucchange::breakfactor(bp1, breaks = length(bp1$breakpoints)))
+          lm_dat[, "y" := dat_trans[abs(length(dat_trans) - length(lm_dat$breakpoints) + 1):length(dat_trans)]]
+          lm = stats::lm(y ~ breakpoints, lm_dat)
+          fit = data.table(stats::predict(lm, level = 1 - sig_level, interval = "confidence"))
+          if(nrow(fit[!(mean(abs(dat_trans), na.rm = TRUE) >= lwr & mean(abs(dat_trans), na.rm = TRUE) <= upr), ]) > 0){
+            fit = pi/2*data.table(stats::predict(lm, level = ci, interval = "confidence"))
+            fit = rbind(matrix(NA, nrow = nrow(series) - nrow(fit), ncol = ncol(fit)), fit, use.names = FALSE)
+            colnames(fit) = c(paste0(k, "_amp_interval_mean"), paste0(k, "_amp_interval_lower"), paste0(k, "_amp_interval_upper"))
+            series_fit = cbind(series_fit, fit)
+            bp = tryCatch(suppressWarnings(data.table(stats::confint(bp1, level = ci)$confint)), 
+                          error = function(err){temp = data.table(x1 = NA, 
+                                                                  breakpoints = bp1$breakpoints, 
+                                                                  x2 = NA)
+                          colnames(temp)[c(1, 3)] = paste(c(1/2*(1 - ci), 1/2*(1 + ci))*100, "%")
+                          return(temp)})
+            colnames(bp) = gsub(" ", "", colnames(bp))
+            bp[eval(parse(text = paste0("`", colnames(bp)[1], "`"))) < 0, colnames(bp)[1] := 0]
+            bp[eval(parse(text = paste0("`", colnames(bp)[3], "`"))) > nrow(series), colnames(bp)[3] := nrow(series)]
+            bp = bp[, lapply(.SD, function(x){dates[x]})]
+            bp[, "break_type" := ifelse(j == "St", "seasonal", 
+                                        ifelse(j == "Ct", "cycle"))]
+            bp[, "break_type2" := "amp"]
+            bp[, "season" := ifelse(j == "St", gsub("St", "", k), "")]
+            bp_dt = rbind(bp_dt, bp, use.names = TRUE, fill = TRUE)
+          }
+        }
+      }
+      
+      if(j == "Ct"){ #Only use for cycle not seasonality
+        #Seasonal/Cycle periodicity break test
+        dat = series[, grepl(j, colnames(series)) & !grepl("_", colnames(series)), with = FALSE]
+        dat[, "y" := rowSums(dat[, grepl(j, colnames(dat)) & !grepl(paste0(j, "s"), colnames(dat)), with = F])]
+        dat[, "ys" := rowSums(dat[, grepl(paste0(j, "s"), colnames(dat)), with = F])]
+        dat_trans = dat$y
+        dat[, paste0(colnames(dat), ".l1") := lapply(.SD, function(x){shift(x, type = "lag", n = 1)})]
+        formula = formula(paste("y ~", paste(colnames(dat)[!grepl("y", colnames(dat)) & grepl("\\.l1", colnames(dat))], collapse = " + "), " - 1"))
+        bp2 = suppressWarnings(strucchange::breakpoints(formula, data = dat,
+                                                       h = min(c(h, round(0.33*length(dat_trans)))),
+                                                       hpc = "foreach"))
+        
+        if(!all(is.na(bp2$breakpoints))){
+          #Seasonal/cycle periodicity break test results
+          lm_dat = data.table(breakpoints = strucchange::breakfactor(bp2, breaks = length(bp2$breakpoints)))
+          lm_dat = cbind(lm_dat, dat[abs(length(dat_trans) - length(lm_dat$breakpoints) + 1):length(dat_trans), ])
+          fit = do.call("rbind", lapply(unique(lm_dat$breakpoints), function(x){
+            lm = stats::lm(formula, data = lm_dat[breakpoints == x, ])
+            coef = data.table(summary(lm)$coefficients, keep.rownames = T)
+            coef[, "upr_sig" := Estimate + stats::qnorm(1 - sig_level/2)*`Std. Error`]
+            coef[, "lwr_sig" := Estimate + stats::qnorm(sig_level/2)*`Std. Error`]
+            coef[, "upr" := Estimate + stats::qnorm(1/2 + ci/2)*`Std. Error`]
+            coef[, "lwr" := Estimate + stats::qnorm(1/2 - ci/2)*`Std. Error`]
+            lm2 = stats::lm(formula, data = lm_dat)
+            coef2 = data.table(summary(lm2)$coefficients)
+            #rho = beta1/cos(lambda)
+            #lambda = atan(beta2/beta1)
+            fit = abs(sapply(seq(1, nrow(coef), 2), function(y){
+              2*pi/atan(coef[y + 1, ]$Estimate/coef[y, ]$Estimate)
+            }))
+            fit2 = abs(sapply(seq(1, nrow(coef2), 2), function(y){
+              2*pi/atan(coef2[y + 1, ]$Estimate/coef2[y, ]$Estimate)
+            }))
+            confint = abs(unlist(lapply(c("upr", "lwr"), function(y){
+              unlist(lapply(c("upr", "lwr"), function(z){
+                sapply(seq(1, nrow(coef), 2), function(w){
+                  2*pi/atan(coef[w + 1, c(y), with = FALSE][[1]]/coef[w, c(z), with = FALSE][[1]])
+                })
+              }))
+            })))
+            sigint = abs(unlist(lapply(c("upr_sig", "lwr_sig"), function(y){
+              unlist(lapply(c("upr_sig", "lwr_sig"), function(z){
+                sapply(seq(1, nrow(coef), 2), function(w){
+                  2*pi/atan(coef[w + 1, c(y), with = FALSE][[1]]/coef[w, c(z), with = FALSE][[1]])
+                })
+              }))
+            })))
+            if(j == "St"){
+              names(fit) = seasons
+              names(confint) = rep(seasons, length(confint)/2)
+              names(sigint) = rep(seasons, length(sigint)/2)
+              group = names(fit)
+            }else if(j == "Ct"){
+              names(fit) = ""
+              names(confint) = rep("", length(confint))
+              names(sigint) = rep("", length(sigint))
+              group = model$cycle
+            }
+            return(data.table(breakpoints = x, group = group, fit = round(fit), 
+                              lwr = floor(sapply(unique(names(confint)), function(y){min(confint[names(confint) == y])})), 
+                              upr = ceiling(sapply(unique(names(confint)), function(y){max(confint[names(confint) == y])})), 
+                              lwr_sig = floor(sapply(unique(names(sigint)), function(y){min(sigint[names(sigint) == y])})), 
+                              upr_sig = ceiling(sapply(unique(names(sigint)), function(y){max(sigint[names(sigint) == y])})), 
+                              test_val = round(fit2)))
+          }))
+          if(nrow(fit[!(test_val >= lwr_sig & test_val <= upr_sig), ]) > 0){
+            fit[, c("lwr_sig", "upr_sig", "test_val") := NULL]
+            fit = do.call("cbind", lapply(unique(fit$group), function(x){
+              temp = data.table::merge.data.table(fit[group == x, ], lm_dat[, "breakpoints"], all.x = TRUE)[, "breakpoints" := NULL]
+              temp = rbind(matrix(NA, nrow = nrow(series) - nrow(temp), ncol = ncol(temp)), temp, use.names = FALSE)
+              colnames(temp) = c("group", paste0(j, ifelse(j == "St", x, ""), "_period_interval_mean"), 
+                                 paste0(j, ifelse(j == "St", x, ""), "_period_interval_lower"), 
+                                 paste0(j, ifelse(j == "St", x, ""), "_period_interval_upper"))
+              return(temp[, 2:ncol(temp)])
+            }))
+            series_fit = cbind(series_fit, fit)
+            bp = tryCatch(suppressWarnings(data.table(stats::confint(bp2, level = ci)$confint)), 
+                          error = function(err){temp = data.table(x1 = NA, 
+                                                                  breakpoints = bp2$breakpoints, 
+                                                                  x2 = NA)
+                          colnames(temp)[c(1, 3)] = paste(c(1/2*(1 - ci), 1/2*(1 + ci))*100, "%")
+                          return(temp)})
+            colnames(bp) = gsub(" ", "", colnames(bp))
+            bp[eval(parse(text = paste0("`", colnames(bp)[1], "`"))) < 0, colnames(bp)[1] := 0]
+            bp[eval(parse(text = paste0("`", colnames(bp)[3], "`"))) > nrow(series), colnames(bp)[3] := nrow(series)]
+            bp = bp[, lapply(.SD, function(x){dates[x]})]
+            bp[, "break_type" := ifelse(j == "St", "seasonal", 
+                                        ifelse(j == "Ct", "cycle"))]
+            bp[, "break_type2" := "period"]
+            bp_dt = rbind(bp_dt, bp, use.names = TRUE, fill = TRUE)
+          }
+        }
+      }
     }
+    suppressWarnings(rm(bp, fit, bp, bp1, bp2, dat, dat_trans, lm, lm_dat, formula, h, k, lm2, ol, dat2))
+    gc()
+    return(list(bp_dt = bp_dt, series_fit = series_fit))
   }
+  bp_dt = out[["bp_dt"]]
+  series = cbind(series, out[["series_fit"]])
+  rm(out)
   
   #Set the trend
   if(!"Tt0" %in% colnames(series)){
@@ -262,13 +428,13 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     suppressWarnings(final[is.na(eval(parse(text = paste0("`", (1/2 + 1/2*ci)*100, "%`")))) & !is.na(break_type), 
                             paste0((1/2 + 1/2*ci)*100, "%") := date.lead])
     suppressWarnings(final[!is.na(break_type) & eval(parse(text = paste0("`", (1/2 - 1/2*ci)*100, "%`"))) < min(date), 
-          paste0("`", (1/2 - 1/2*ci)*100, "%`") := min(date)])
+          paste0((1/2 - 1/2*ci)*100, "%") := min(date)])
     suppressWarnings(final[!is.na(break_type) & eval(parse(text = paste0("`", (1/2 - 1/2*ci)*100, "%`"))) > max(date), 
-          paste0("`", (1/2 - 1/2*ci)*100, "%`") := max(date)])
+          paste0((1/2 - 1/2*ci)*100, "%") := max(date)])
     suppressWarnings(final[!is.na(break_type) & eval(parse(text = paste0("`", (1/2 + 1/2*ci)*100, "%`"))) < min(date), 
-          paste0("`", (1/2 - 1/2*ci)*100, "%`") := min(date)])
+          paste0((1/2 - 1/2*ci)*100, "%") := min(date)])
     suppressWarnings(final[!is.na(break_type) & eval(parse(text = paste0("`", (1/2 + 1/2*ci)*100, "%`"))) > max(date), 
-          paste0("`", (1/2 - 1/2*ci)*100, "%`") := max(date)])
+          paste0((1/2 - 1/2*ci)*100, "%") := max(date)])
     final[, c("date.lag", "date.lead") := NULL]
   }else{
     final[, "break_type" := NA]
@@ -279,12 +445,12 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   cols = colnames(final)[colnames(final) %in% c("observed", "trend") | grepl("Tt0_interval_", colnames(final))]
   final[, c(cols) := lapply(.SD, function(x){x*sd + mean}), .SDcols = c(cols)]
   
-  cols = colnames(final)[!colnames(final) %in% c("date", "break_type", cols) & !grepl("\\%", colnames(final))]
+  cols = colnames(final)[!colnames(final) %in% c("date", "break_type", "break_type2", "season", cols) & !grepl("\\%", colnames(final)) & !grepl("period", colnames(final))]
   final[,  c(cols) := lapply(.SD, function(x){x*sd}), .SDcols = c(cols)]
   
   if(model$multiplicative == TRUE){
-    final[, c(colnames(final)[!colnames(final) %in% c("date", "break_type") & !grepl("\\%", colnames(final))]) := lapply(.SD, exp),
-          .SDcols = c(colnames(final)[!colnames(final) %in% c("date", "break_type") & !grepl("\\%", colnames(final))])]
+    final[, c(colnames(final)[!colnames(final) %in% c("date", "break_type", "break_type2", "season") & !grepl("\\%", colnames(final)) & !grepl("period", colnames(final))]) := lapply(.SD, exp),
+          .SDcols = c(colnames(final)[!colnames(final) %in% c("date", "break_type", "break_type2", "season") & !grepl("\\%", colnames(final)) & !grepl("period", colnames(final))])]
   }
   
   if(plot == TRUE){
@@ -292,7 +458,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
       bp = final[break_type == "trend", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%")), with = FALSE]
       colnames(bp) = c("lower", "date", "upper")
       suppressWarnings(plot(ggplot(data.table::melt(final, id.vars = "date", measure.vars = c("observed", "trend"))) +
-                              labs(title = "Trend Break Detection", x = "", y = "") +
+                              labs(title = "Trend Break Detection", subtitle = paste0(round(ci*100), "% Confidence Interval"), x = "", y = "") +
                               geom_line(aes(x = date, y = value, group = variable, color = variable)) + theme_minimal() +
                               scale_color_viridis_d() +
                               guides(color = guide_legend(title = NULL), size = guide_legend(title = NULL)) +
@@ -308,50 +474,164 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     }
     
     if(nrow(final[break_type == "cycle", ]) > 0){
-      bp = final[break_type == "cycle", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%")), with = FALSE]
-      colnames(bp) = c("lower", "date", "upper")
-      suppressWarnings(plot(ggplot(data.table::melt(final, id.vars = "date", measure.vars = c("cycle"))) +
-                              labs(title = "Cycle Break Detection", x = "", y = "") +
-                              geom_line(aes(x = date, y = value - mean(final$cycle, na.rm = TRUE), group = variable, color = variable)) +
-                              scale_color_viridis_d() +
-                              theme_minimal() + guides(color = guide_legend(title = NULL)) +
-                              geom_vline(data = bp, aes(xintercept = date), color = "black") +
-                              geom_rect(data = bp,
-                                        aes(xmin = lower, xmax = upper, ymin = -Inf, ymax = Inf, fill = "break"), alpha = 0.5) +
-                              geom_ribbon(data = final[, c("date", "Ct_interval_lower", "Ct_interval_upper"), with = FALSE],
-                                          aes(x = date,
-                                              ymin = Ct_interval_lower - mean(final$cycle, na.rm = TRUE),
-                                              ymax = Ct_interval_upper - mean(final$cycle, na.rm = TRUE)), alpha = 0.5) +
-                              geom_line(data = data.table::melt(final[, c("date", "Ct_interval_mean"), with = FALSE], id.vars = "date"), 
-                                        aes(x = date, y = value - mean(final$cycle, na.rm = TRUE)), color = "red") + 
-                              theme(legend.position = "bottom") + 
-                              guides(fill = guide_legend(title = NULL))))
+      bp = final[break_type == "cycle", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%"), "break_type2"), with = FALSE]
+      colnames(bp) = c("lower", "date", "upper", "break_type")
+      
+      bp2 = final[break_type == "cycle" & break_type2 == "period", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%")), with = FALSE]
+      if(nrow(bp2) > 0){
+        bp2 = rbind(data.table(date = min(final$date)), bp2, data.table(date = max(final$date)), use.names = TRUE, fill = TRUE)
+        bp2[, "interval_start" := date][, "interval_end" := shift(date, type = "lead", n = 1)]
+        bp2 = bp2[!is.na(interval_end), ]
+        bp2 = cbind(bp2, do.call("rbind", lapply(1:nrow(bp2), function(x){
+          temp = final[date >= bp2[x, ]$interval_start & date <= bp2[x, ]$interval_end, c(colnames(final)[grepl("period", colnames(final))]), with = FALSE]
+          colMeans(temp[, grepl("Ct_", colnames(temp)), with = FALSE], na.rm = TRUE)
+        })))
+        periods = tryCatch(bp2[, 4:ncol(bp2)], error = function(err){NULL})
+        if(!is.null(periods)){
+          periods[, colnames(periods)[3:ncol(periods)] := lapply(.SD, round), 
+                .SDcols = colnames(periods)[3:ncol(periods)]]
+          colnames(periods) = gsub("Ct|interval|period|_", "", colnames(periods))
+          colnames(periods)[grepl("mean", colnames(periods))] = gsub("mean", " Period", colnames(periods)[grepl("mean", colnames(periods))])
+          colnames(periods)[grepl("lower", colnames(periods))] = gsub("lower", paste0(" ", (1/2 - ci/2)*100, "%"), colnames(periods)[grepl("lower", colnames(periods))])
+          colnames(periods)[grepl("upper", colnames(periods))] = gsub("upper", paste0(" ", (1/2 + ci/2)*100, "%"), colnames(periods)[grepl("upper", colnames(periods))])
+          periods[, "x" := mean(c(start, end)), by = "start"]
+          periods[, "y" := mean(final$cycle, na.rm = T)]
+          periods[, "segment" := 1:.N]
+          colnames(periods) = trimws(colnames(periods))
+          periods[, "text" := paste0("Segment ", segment, "\nPeriod: ", Period, " [",
+                                     eval(parse(text = paste0("`", (1/2 - ci/2)*100, "%`"))), ", ",
+                                     eval(parse(text = paste0("`", (1/2 + ci/2)*100, "%`"))), "]")]
+          periods = periods[, .(text = paste(text, collapse = "\n")), by = c("start", "end", "x", "y")]
+        }
+      }else{
+        periods = NULL
+      }
+        
+      adj = mean(final$seasonal, na.rm = TRUE)
+      subtitle = paste0("Amplitude", ifelse(!is.null(periods),  " & Periodicity", ""), ", ", round(ci*100), "% Confidence Interval")
+      g1 = ggplot(data.table::melt(final, id.vars = "date", measure.vars = c("cycle"))) +
+          labs(title = "Cycle Break Detection", subtitle = subtitle, x = "", y = "") +
+          geom_line(aes(x = date, y = value, group = variable, color = variable)) +
+          scale_color_viridis_d() +
+          theme_minimal() + guides(color = guide_legend(title = NULL)) +
+          geom_vline(data = bp, aes(xintercept = date), color = "black") +
+          geom_hline(aes(yintercept = ifelse(model$multiplicative == TRUE, 1, 0)), color = "black") + 
+          geom_rect(data = bp,
+                    aes(xmin = lower, xmax = upper, ymin = -Inf, ymax = Inf, fill = break_type), alpha = 0.5) + 
+          theme(legend.position = "bottom") + 
+          guides(fill = guide_legend(title = NULL))
+        
+      if(any(grepl("Ct_amp", colnames(final)))){
+        g1 = g1 + geom_ribbon(data = final[, c("date", "Ct_amp_interval_lower", "Ct_amp_interval_upper"), with = FALSE],
+                      aes(x = date,
+                          ymin = Ct_amp_interval_lower,
+                          ymax = Ct_amp_interval_upper), alpha = 0.5) +
+          geom_ribbon(data = final[, c("date", "Ct_amp_interval_lower", "Ct_amp_interval_upper"), with = FALSE],
+                      aes(x = date,
+                          ymin = -(Ct_amp_interval_lower - adj) + adj,
+                          ymax = -(Ct_amp_interval_upper - adj) + adj), alpha = 0.5) + 
+          geom_line(data = data.table::melt(final[, c("date", "Ct_amp_interval_mean"), with = FALSE], id.vars = "date"), 
+                    aes(x = date, y = value), color = "red") + 
+          geom_line(data = data.table::melt(final[, c("date", "Ct_amp_interval_mean"), with = FALSE], id.vars = "date"), 
+                    aes(x = date, y = -(value - adj) + adj), color = "red")
+      }
+
+      if(!is.null(periods)){
+        g1 = g1 + ggrepel::geom_label_repel(data = periods, aes(x = x, y = y, label = text), alpha = 0.8)
+      }
+      suppressWarnings(plot(g1))
     }
-    
+
     if(any(grepl("seasonal", unique(final$break_type)))){
-      bp = final[break_type == "seasonal", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%")), with = FALSE]
-      colnames(bp) = c("lower", "date", "upper")
-      suppressWarnings(plot(ggplot(data.table::melt(final, id.vars = "date", measure.vars = "seasonal")) +
-                              labs(title = "Seasonal Break Detection", x = "", y = "") +
-                              geom_line(aes(x = date, y = value - mean(final$seasonal, na.rm = TRUE), group = variable, color = variable)) +
-                              scale_color_viridis_d() +
-                              theme_minimal() + guides(color = guide_legend(title = NULL)) +
-                              geom_vline(data = bp, aes(xintercept = date), color = "black") +
-                              geom_rect(data = bp,
-                                        aes(xmin = lower, xmax = upper, ymin = -Inf, ymax = Inf, fill = "break"), alpha = 0.5) +
-                              geom_ribbon(data = final[, c("date", "St_interval_lower", "St_interval_upper"), with = FALSE],
-                                          aes(x = date,
-                                              ymin = eval(parse(text = "St_interval_lower")) - mean(final$seasonal, na.rm = TRUE),
-                                              ymax = eval(parse(text = "St_interval_upper")) - mean(final$seasonal, na.rm = TRUE)), alpha = 0.5) +
-                              geom_line(data = data.table::melt(final[, c("date", "St_interval_mean"), with = FALSE], id.vars = "date"), 
-                                        aes(x = date, y = value - mean(final$seasonal, na.rm = TRUE)), color = "red") + 
-                              theme(legend.position = "bottom") + 
-                              guides(fill = guide_legend(title = NULL))))
+      g = list()
+      for(k in unique(bp_dt[break_type == "seasonal" & !is.na(season), ]$season)){
+        bp = final[break_type == "seasonal" & (season == k | is.na(season)), c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%"), "break_type2"), with = FALSE]
+        colnames(bp) = c("lower", "date", "upper", "break_type")
+        
+        bp2 = final[break_type == "seasonal" & break_type2 == "period", c(paste0((1/2 - ci/2)*100, "%"), "date", paste0((1/2 + ci/2)*100, "%")), with = FALSE]
+        if(nrow(bp2) > 0){
+          bp2 = rbind(data.table(date = min(final$date)), bp2, data.table(date = max(final$date)), use.names = TRUE, fill = TRUE)
+          bp2[, "interval_start" := date][, "interval_end" := shift(date, type = "lead", n = 1)]
+          bp2 = bp2[!is.na(interval_end), ]
+          bp2 = cbind(bp2, do.call("rbind", lapply(1:nrow(bp2), function(x){
+            temp = final[date >= bp2[x, ]$interval_start & date >= bp2[x, ]$interval_end, c(colnames(final)[grepl("period", colnames(final))]), with = FALSE]
+            colMeans(temp[, grepl(paste(paste0("St", seasons), collapse = "|"), colnames(temp)), with = FALSE], na.rm = TRUE)
+          })))
+          periods = tryCatch(bp2[, 4:ncol(bp2)], error = function(err){NULL})
+          if(!is.null(periods)){
+            periods[, colnames(periods)[3:ncol(periods)] := lapply(.SD, round), 
+                  .SDcols = colnames(periods)[3:ncol(periods)]]
+            colnames(periods) = gsub("St|interval|period|_", "", colnames(periods))
+            colnames(periods)[grepl("mean", colnames(periods))] = gsub("mean", " Period", colnames(periods)[grepl("mean", colnames(periods))])
+            colnames(periods)[grepl("lower", colnames(periods))] = gsub("lower", paste0(" ", (1/2 - ci/2)*100, "%"), colnames(periods)[grepl("lower", colnames(periods))])
+            colnames(periods)[grepl("upper", colnames(periods))] = gsub("upper", paste0(" ", (1/2 + ci/2)*100, "%"), colnames(periods)[grepl("upper", colnames(periods))])
+            periods = data.table::melt(periods, id.vars = c("start", "end"))
+            periods$season = sapply(periods$variable, function(x){strsplit(as.character(x), " ")[[1]][1]})
+            periods$variable = sapply(periods$variable, function(x){strsplit(as.character(x), " ")[[1]][2]})
+            periods = dcast(periods, "start + end + season ~ variable", value.var = "value")
+            periods[, "x" := mean(c(start, end)), by = "start"]
+            periods[, "y" := mean(final[, paste0("seasonal", k), with = FALSE][[1]], na.rm = T)]
+            colnames(periods) = trimws(colnames(periods))
+            periods = periods[season == k, ]
+            periods[, "text" := paste0(Period, " [",
+                                       eval(parse(text = paste0("`", (1/2 - ci/2)*100, "%`"))), ", ",
+                                       eval(parse(text = paste0("`", (1/2 + ci/2)*100, "%`"))), "]")]
+            periods = periods[, .(text = paste(text, collapse = "\n")), by = c("start", "end", "x", "y")]
+            periods[, "segment" := 1:.N]
+            periods[, "text" := paste0("Segment ", segment, "\n", text)]
+          }
+        }else{
+          periods = NULL
+        }
+        
+        adj = mean(final[, paste0("seasonal", k), with = FALSE][[1]], na.rm = TRUE)
+        toplot = data.table::melt(final, id.vars = "date", measure.vars = c(paste0("seasonal", k)))
+        subtitle = paste0("Amplitude", ifelse(!is.null(periods),  " & Periodicity", ""), ", ", round(ci*100), "% Confidence Interval")
+        g1 = ggplot(toplot) +
+          labs(title = paste("Seasonal", k, "Break Detection"), subtitle = subtitle, x = "", y = "") +
+          geom_line(aes(x = date, y = value, group = variable, color = variable)) +
+          scale_color_viridis_d() +
+          theme_minimal() + guides(color = guide_legend(title = NULL)) +
+          geom_vline(data = bp, aes(xintercept = date), color = "black") +
+          geom_hline(aes(yintercept = ifelse(model$multiplicative == TRUE, 1, 0)), color = "black") + 
+          geom_rect(data = bp,
+                    aes(xmin = lower, xmax = upper, ymin = -Inf, ymax = Inf, fill = break_type), alpha = 0.5) + 
+          theme(legend.position = "bottom") + 
+          guides(fill = guide_legend(title = NULL))
+        if(any(grepl(paste0("St", k, "_amp"), colnames(final)))){
+          toplot2 = final[, c("date", paste0("St", k, c("_amp_interval_lower", "_amp_interval_upper", "_amp_interval_mean"))), with = FALSE]
+          colnames(toplot2)[grepl("lower", colnames(toplot2))] = "lower"
+          colnames(toplot2)[grepl("upper", colnames(toplot2))] = "upper"
+          colnames(toplot2)[grepl("mean", colnames(toplot2))] = "mean"
+          g1 = g1 + geom_ribbon(data = toplot2,
+                      aes(x = date, ymin = lower, ymax = upper), alpha = 0.5) +
+          geom_ribbon(data = toplot2,
+                      aes(x = date, ymin = -(lower - adj) + adj, ymax = -(upper - adj) + adj), alpha = 0.5) +
+          geom_line(data = data.table::melt(toplot2[, c("date", "mean"), with = FALSE], id.vars = "date"), 
+                    aes(x = date, y = value), color = "red") + 
+          geom_line(data = data.table::melt(toplot2[, c("date", "mean"), with = FALSE], id.vars = "date"), 
+                    aes(x = date, y = -(value - adj) + adj), color = "red")
+        }
+     
+        if(!is.null(periods)){
+          g1 = g1 + ggrepel::geom_label_repel(data = periods, aes(x = x, y = y, label = text), alpha = 0.8)
+        }
+        g[[k]] = g1
+      }
+      
+      layout_matrix = 1:(2*ceiling(length(g)/2))
+      if(length(layout_matrix) > length(g)){
+        layout_matrix = c(layout_matrix[1], 1:(length(layout_matrix) - 1))
+      }
+      layout_matrix = t(matrix(layout_matrix, ncol = 2, byrow = TRUE))
+      suppressWarnings(gridExtra::grid.arrange(grobs = g, layout_matrix = layout_matrix))
     }
   }
-  final = final[, colnames(final) %in% c("date", "break_type", paste0((1/2 - ci/2)*100, "%"), paste0((1/2 + ci/2)*100, "%")), with = FALSE]
+  final = final[, colnames(final)[grepl("\\%|interval|break|date", colnames(final))], with = FALSE]
   if(any(grepl("\\%", colnames(final)))){
     colnames(final)[grepl("\\%", colnames(final))] = paste0(colnames(final)[grepl("\\%", colnames(final))], "_break")
   }
+  colnames(final)[grepl("interval_lower", colnames(final))] = gsub("_lower", paste0(c(1/2 - ci/2)*100, "%"), colnames(final)[grepl("interval_lower", colnames(final))])
+  colnames(final)[grepl("interval_upper", colnames(final))] = gsub("_upper", paste0(c(1/2 + ci/2)*100, "%"), colnames(final)[grepl("interval_upper", colnames(final))])
   return(final)
 }

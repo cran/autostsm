@@ -9,8 +9,7 @@ stsm_detect_seasonality(
   freq,
   sig_level = 1e-04,
   prior = NULL,
-  full = F,
-  spectrum = NULL
+  full_spectrum = FALSE
 )
 }
 \arguments{
@@ -22,9 +21,7 @@ stsm_detect_seasonality(
 
 \item{prior}{A data table created from stsm_prior}
 
-\item{full}{Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion}
-
-\item{spectrum, }{Vector of seasonal periods to check}
+\item{full_spectrum}{check the full spectrum of seasonal frequencies for seasonality}
 }
 \value{
 Numeric vector of seasonal periodicities

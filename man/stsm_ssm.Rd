@@ -7,7 +7,6 @@
 stsm_ssm(
   par = NULL,
   yt = NULL,
-  freq = NULL,
   decomp = NULL,
   trend = NULL,
   init = NULL,
@@ -18,8 +17,6 @@ stsm_ssm(
 \item{par}{Vector of named parameter values, includes the harmonics}
 
 \item{yt}{Univariate time series of data values}
-
-\item{freq}{Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily))}
 
 \item{decomp}{Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")}
 

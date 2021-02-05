@@ -14,7 +14,8 @@ stsm_detect_breaks(
   ci = 0.8,
   smooth = TRUE,
   plot = FALSE,
-  cores = NULL
+  cores = NULL,
+  show_progress = FALSE
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ stsm_detect_breaks(
 \item{plot}{Whether to plot everything}
 
 \item{cores}{Number of cores to use for break detection}
+
+\item{show_progress}{Whether to show progress bar}
 }
 \value{
 data table (or list of data tables) containing the dates of detected anomalies from the filtered and/or smoothed series

@@ -31,21 +31,22 @@ knitr::opts_chunk$set(
 #  }
 #  
 #  #Build the seasonality including yearly and weekly
-#  s1 = sin(2*pi/365.25*(1:length(t))) + rnorm(length(t), 0, sig_s)
-#  s1 = (s1 - min(s1))/diff(range(s1))*(1.125 - 0.865) + 0.865
-#  s52 = sin(2*pi/(365.25/52)*(1:length(t))) + rnorm(length(t), 0, sig_s)
-#  s52 = (s52 - min(s52))/diff(range(s52))*(1.125 - 0.865) + 0.865
-#  s = s1 + s52
+#  s365 = sin(2*pi/freq*(1:length(t))) + rnorm(length(t), 0, sig_s)
+#  s365 = (s365 - min(s365))/diff(range(s365))*(1.125 - 0.865) + 0.865
+#  s7 = sin(2*pi/7*(1:length(t))) + rnorm(length(t), 0, sig_s)
+#  s7 = (s7 - min(s7))/diff(range(s7))*(1.125 - 0.865) + 0.865
+#  s = s365 + s7
 #  s = (s - min(s))/diff(range(s))*(1.25 - 0.75) + 0.75
 #  
 #  #Build the cyclicality using every 3 years periodicity
-#  c = sin(2*pi*0.33/365.25*(1:length(t))) + rnorm(length(t), 0, sig_s)
+#  c = sin(2*pi*0.33/freq*(1:length(t))) + rnorm(length(t), 0, sig_s)
 #  c = (c - min(c))/diff(range(c))*(1.25 - 0.75) + 0.75
 #  
 #  #Build the data using a multiplicative model
 #  ts = data.table(date = as.Date("2016-01-01") + 1:length(t),
 #                  y = t*c*s*exp(rnorm(length(t), 0, sig_e)),
-#                  trend = t, seasonal = s, seasonal52 = s52, seasonal1 = s1, cycle = c)
+#                  trend = t, seasonal = s, seasonal7 = s7,
+#                  seasonal365 = s365, cycle = c)
 #  
 #  #Create some missing values
 #  ts[sample(1:nrow(ts), round(0.05*nrow(ts))), "y" := NA]
@@ -77,14 +78,14 @@ knitr::opts_chunk$set(
 #  #Forecast and plot the results
 #  stsm_fc = stsm_forecast(stsm, y = ts[, c("date", "y"), with = FALSE], n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  
-#  #Detect Anomalies
+#  #Detect anomalies
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE),
 #                  by = "date", all = TRUE)
 #  
 #  #Detect structural breaks
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 
 ## -----------------------------------------------------------------------------
@@ -96,12 +97,12 @@ knitr::opts_chunk$set(
 #  UNRATENSA[, "date" := as.Date(date)]
 #  UNRATENSA[, "y" := as.numeric(y)]
 #  stsm = stsm_estimate(UNRATENSA)
-#  stsm_fc = stsm_forecast(stsm, UNRATENSA, n.ahead = floor(stsm$freq)*10, plot = TRUE)
+#  stsm_fc = stsm_forecast(stsm, y = UNRATENSA, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = UNRATENSA, plot = TRUE),
 #                  by = "date", all = TRUE)
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = UNRATENSA, plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = UNRATENSA, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 #  
 #  #Seasonally adjusted
@@ -116,7 +117,7 @@ knitr::opts_chunk$set(
 #                  stsm_detect_anomalies(stsm, y = UNRATE, plot = TRUE),
 #                  by = "date", all = TRUE)
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = UNRATE, plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = UNRATE, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 #  
 #  ##### GDP examples #####
@@ -133,7 +134,7 @@ knitr::opts_chunk$set(
 #                  stsm_detect_anomalies(stsm, y = NA000334Q, plot = TRUE),
 #                  by = "date", all = TRUE)
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = NA000334Q, plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = NA000334Q, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 #  
 #  #Seasonally adjusted
@@ -149,7 +150,7 @@ knitr::opts_chunk$set(
 #                  stsm_detect_anomalies(stsm, y = GDP, plot = TRUE),
 #                  by = "date", all = TRUE)
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = GDP, plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = GDP, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 #  
 #  ##### S&P 500 example #####
@@ -164,6 +165,6 @@ knitr::opts_chunk$set(
 #                  stsm_detect_anomalies(stsm, y = SP500, plot = TRUE),
 #                  by = "date", all = TRUE)
 #  stsm_fc = merge(stsm_fc,
-#                  stsm_detect_breaks(stsm, y = SP500, plot = TRUE),
+#                  stsm_detect_breaks(stsm, y = SP500, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 

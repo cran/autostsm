@@ -31,11 +31,43 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   #sig_level = 0.01
   #plot = smooth = TRUE
   #freq = exo = NULL
+  #stsm_build_dates = autostsm:::stsm_build_dates
+  #stsm_init_vals = autostsm:::stsm_init_vals
+  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  
+  #Bind data.table variables to the global environment
+  anomaly = predicted = value = variable = observed = NULL
+  
+  #Argument tests
   if(!is.logical(plot)){
     stop("plot must be TRUE or FALSE")
   }
   if(sig_level < 0 | sig_level > 0.1){
     stop("sig_level must be positive and <= 0.1")
+  }
+  if(!is.null(freq)){
+    if(!is.numeric(freq)){
+      stop("freq must be numeric")
+    }
+  }
+  if(!is.null(exo)){
+    if(!(is.data.frame(exo) | is.data.table(exo))){
+      stop("exo must be a data frame or data table")
+    }
+  }
+  if(!all(sapply(c(smooth, plot), is.logical))){
+    stop("smooth, plot must be logical")
+  }
+  if(!(is.data.frame(y) | is.data.table(y) | stats::is.ts(y))){
+    stop("y must be a data frame or data table")
+  }else{
+    y = as.data.table(y)
+    if(ncol(y) != 2){
+      stop("y must have two columns")
+    }else if(!all(unlist(lapply(colnames(y), function(x){class(y[, c(x), with = FALSE][[1]])})) %in% 
+                  c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+      stop("y must have a date and numeric column")
+    }
   }
   
   #Get the frequency of the data
@@ -80,22 +112,27 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   #Get model specifications
   decomp = model$decomp
   trend = model$trend
-  if(!is.na(model$harmonics)){
-    harmonics = as.numeric(strsplit(model$harmonics, ", ")[[1]])
+  if(!is.na(model$seasons)){
+    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
   }else{
-    harmonics = c()
+    seasons = c()
+  }
+  if(!is.na(model$cycle)){
+    cycle = model$cycle
+  }else{
+    cycle = c()
   }
   
   #Get the coefficients
   par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, harmonics)
+  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
   
   #Filter and smooth the data
-  sp = stsm_ssm(par = par, yt = y, freq = freq, decomp = decomp, trend = trend, init = init)
-  B_tt = kalman_filter(B0 = matrix(sp$B0, ncol = 1), P0 = sp$P0, Dt = sp$Dt, At = sp$At, Ft = sp$Ft, Ht = sp$Ht, Qt = sp$Qt, Rt = sp$Rt,
-                       yt = matrix(y, nrow = 1), X = X, beta = sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
+  sp = stsm_ssm(par, y, decomp, trend, init)
+  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dt, sp$At, sp$Ft, sp$Ht, sp$Qt, sp$Rt,
+                       matrix(y, nrow = 1), X, sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
   if(smooth == TRUE){
-    B_tt = kalman_smoother(B_tl = B_tt$B_tl, B_tt = B_tt$B_tt, P_tl = B_tt$P_tl, P_tt = B_tt$P_tt, Ft = sp$Ft)$B_tt
+    B_tt = kalman_smoother(B_tt$B_tl, B_tt$B_tt, B_tt$P_tl, B_tt$P_tt, sp$Ft)$B_tt
   }else{
     B_tt = B_tt$B_tt
   }
@@ -117,9 +154,9 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   errors[1:length(y), "pred" := y - pred]
   
   #Test for data anomalies
-  anomaly = predicted = value = variable = observed = NULL
   anomalies = data.table(date = dates[which(abs(errors$pred) > stats::qnorm(1 - sig_level, 0, sqrt(fev)))], anomaly = TRUE)
   final = merge(data.table(date = dates), anomalies, by = "date", all = TRUE)[is.na(anomaly), "anomaly" := FALSE]
+  final = final[!is.na(date), ]
   final[, "predicted" := pred]
   final[, paste0((1 - sig_level)*100, "%") := predicted + stats::qnorm(1 - sig_level, 0, sqrt(fev))]
   final[, paste0((sig_level)*100, "%") := predicted - stats::qnorm(1 - sig_level, 0, sqrt(fev))]

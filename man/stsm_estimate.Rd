@@ -15,7 +15,6 @@ stsm_estimate(
   multiplicative = NULL,
   par = NULL,
   seasons = NULL,
-  harmonics = NULL,
   cycle = NULL,
   det_obs = FALSE,
   det_trend = NULL,
@@ -25,9 +24,7 @@ stsm_estimate(
   sig_level = 0.01,
   optim_methods = c("BFGS", "NM", "CG", "SANN"),
   maxit = 10000,
-  verbose = FALSE,
-  full_seasonal_spectrum = FALSE,
-  seasonal_spectrum = NULL
+  verbose = FALSE
 )
 }
 \arguments{
@@ -65,15 +62,11 @@ If multiplicative = TRUE, then the data is logged and the original model becomes
 
 \item{par}{Initial parameters, default is NULL}
 
-\item{seasons}{The seasonal periods: i.e. c(365.25, 7 if yearly and weekly seasonality). Default is NULL and will be estimated via wavelet analysis.}
+\item{seasons}{The seasonal periods: i.e. c(365.25, 7 if yearly and weekly seasonality). Default is NULL and will be estimated via wavelet analysis. 
+Can set to FALSE if want no seasonality}
 
-\item{harmonics}{Vector for number of cycles per year for all of the seasons: i.e. c(unique(1:floor(12/2)), unique(1:floor(7/2))).}
-
-\item{cycle, }{The period for the longer-term cycle
-The default is NULL, which will use 1 harmonic per season (freq/seasons) if seasons is estimated via wavelet analysis for parsimony.
-Otherwise it will use c(1, 2, 4, 6, 12, 24, 365.25/7, 365.25/3.5, 365.25/2) to capture harmonics at
-yearly, semi-yearly, quarterly, every other month, monthly, twice per month, weekly, twice per week, and every other day to fully parameterize yearly, quarterly, monthly, and weekly
-but will keep only harmonics > 0 and <= freq/2. This is more parsimonious than using harmonics at 1:floor(seasons/2).}
+\item{cycle, }{The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
+Can set to FALSE if want no cycle.}
 
 \item{det_obs}{Set the observation equation error variance to 0 (deterministic observation equation)
 If det_obs = TRUE then the error variance of the observation equation (sig_e) is set to 0}
@@ -101,10 +94,6 @@ is referred to as a deterministic cycle}
 \item{maxit}{Maximum number of iterations for the optimization}
 
 \item{verbose}{Logical whether to print messages or not}
-
-\item{full_seasonal_spectrum}{Whether to check for full spectrum of seasonality rather than weekly and yearly suggestion}
-
-\item{seasonal_spectrum, }{Vector of seasonal periods to check}
 }
 \value{
 List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification

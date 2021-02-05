@@ -4,7 +4,15 @@
 \alias{stsm_detect_trend}
 \title{Detect trend type}
 \usage{
-stsm_detect_trend(y, freq, decomp = "", sig_level = 0.01, prior = NULL)
+stsm_detect_trend(
+  y,
+  freq,
+  decomp = "",
+  sig_level = 0.01,
+  prior = NULL,
+  seasons = NULL,
+  cycle = NULL
+)
 }
 \arguments{
 \item{y}{Univariate time series of data values. May also be a 2 column data frame containing a date column.}
@@ -16,6 +24,10 @@ stsm_detect_trend(y, freq, decomp = "", sig_level = 0.01, prior = NULL)
 \item{sig_level}{Significance level to determine statistically significant seasonal frequencies}
 
 \item{prior}{A data table created by stsm_prior}
+
+\item{seasons}{The seasonal periods}
+
+\item{cycle}{The cycle period}
 }
 \value{
 list with trend type and logical flag for deterministic trend if the trend is determined to have 0 differencing

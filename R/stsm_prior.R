@@ -2,8 +2,9 @@
 #'
 #' @param y an object created from stsm_detect_frequency
 #' @param freq Frequency of the data
-#' @param harmonics The harmonics to split the seasonality into
+#' @param seasons The seasonal periods to split the seasonality into
 #' @param decomp decomposition string
+#' @param cycle The cycle periods
 #' @import data.table
 #' @return data table containing a naive decomposition using STL
 #' @examples
@@ -19,56 +20,53 @@
 #' prior = stsm_prior(y = NA000334Q$y, freq = 4)
 #' }
 #' @export
-stsm_prior = function(y, freq, decomp = "", harmonics = NULL){
+stsm_prior = function(y, freq, decomp = "", seasons = NULL, cycle = NULL){
+  #Bind data.table global variables
+  trend = seasonal = cycle = remainder = seasonalcycle = NULL
+  
+  #Impute missing values for using the Kalman filter for prior decompoosition
   if(any(is.na(y))){
     y = suppressWarnings(imputeTS::na_kalman(y))
   }
   
-  trend = seasonal = cycle = remainder = NULL
-  if(length(y) > 2*freq){
-    if(seastests::wo(stats::ts(y, frequency = floor(freq)))$stat == TRUE | grepl("seasonal", decomp)){
-      prior = data.table(stats::stl(stats::ts(y, frequency = floor(freq)), s.window = 7, s.degree = 1, l.degree = 1, t.degree = 1)$time.series)
-    }else{
-      prior = data.table(trend = stats::predict(stats::loess(y ~ t, data.table(y = y)[, "t" := 1:.N])))[, "seasonal" := 0][, "remainder" := y - trend]
-    }
-  }else{
-    prior = data.table(trend = stats::predict(stats::loess(y ~ t, data.table(y = y)[, "t" := 1:.N])))[, "seasonal" := 0][, "remainder" := y - trend]
-  }
-  if(all(prior$seasonal == 0) & ifelse(!is.null(harmonics), length(harmonics) > 0, FALSE)){
-    prior[, "seasonal" := y - trend][, "remainder" := y - trend - seasonal][, "seasonal_adj" := y - seasonal]
-  }
-  prior[, "seasonal_adj" := y - seasonal]
-  if(grepl("cycle", decomp) | decomp == ""){
-    if(!all(prior$seasonal == 0)){
-      new_trend = stats::predict(stats::loess(y ~ t, data.table(y = y)[, "t" := 1:.N]))
-      prior[, "cycle" := trend - new_trend]
-      prior[, "trend" := new_trend]
-    }else{
-      prior[, "cycle" := stats::predict(stats::smooth.spline(remainder))$y]
-      prior[, "remainder" := y - seasonal - cycle]
-    }
-  }else{
-    prior[, "cycle" := 0]
-  }
+  #Split the data into trend + seasonal-cycle + remainder
+  prior = data.table(trend = stats::predict(stats::loess(y ~ t, data.table(y = y)[, "t" := 1:.N])))[, "remainder" := y - trend]
+  prior[, "seasonalcycle" := stats::predict(stats::smooth.spline(remainder))$y][, "remainder" := y - trend - seasonalcycle]
+  prior[, "seasonalcycle" := seasonalcycle + remainder*2/3][, "remainder" := remainder*1/3]
+  prior[, "seasonal" := 0][, "cycle" := 0]
+  
+  #Get the drift and 
   prior[, "drift" := trend - shift(trend, type = "lag", n = 1)]
   prior[1, "drift" := 0]
-  prior[, "remainder" := y - trend - seasonal - cycle]
-  if(ifelse(!is.null(harmonics), length(harmonics) > 0, FALSE)){
-    ff = data.table(seasonal = prior$seasonal, t = 1:nrow(prior))
-    for(j in harmonics){
-      ff[, paste0("sin", j) := sin(2*pi*j/freq*t)]
-      ff[, paste0("cos", j) := cos(2*pi*j/freq*t)]
+  
+  #Get a smooth cycle estimate
+  if(grepl("cycle", decomp) | decomp == "" | 
+     (ifelse(!is.null(cycle), length(cycle) > 0, FALSE) & ifelse(!is.null(seasons), length(seasons) == 0, TRUE))){
+    prior[, "cycle" := stats::predict(stats::smooth.spline(seasonalcycle))$y]
+    prior[, "remainder" := y - trend - seasonal - cycle]
+  }
+  
+  #Estimate the seasonal and cycle components
+  if(ifelse(!is.null(seasons), length(seasons) > 0, FALSE)){
+    ff = data.table(seasonalcycle = prior$seasonalcycle, t = 1:nrow(prior))
+    for(j in c(seasons, cycle)){
+      ff[, paste0("sin", j) := sin(2*pi*1/j*t)]
+      ff[, paste0("cos", j) := cos(2*pi*1/j*t)]
     }
     ff[, "t" := NULL]
-    lm_s = stats::lm(seasonal ~ ., data = ff)
-    prior = cbind(prior, do.call("cbind", lapply(harmonics, function(x){
-      matrix(stats::coef(lm_s)["(Intercept)"]/length(harmonics) + 
-               c(as.matrix(ff[, paste0(c("sin", "cos"), x), with = FALSE]) %*% 
-                   matrix(stats::coef(lm_s)[paste0(c("sin", "cos"), x)], ncol = 1)) + 
-               lm_s$residuals/length(harmonics), 
+    lm_s = stats::lm(seasonalcycle ~ ., data = ff)
+    prior = cbind(prior, do.call("cbind", lapply(seasons, function(x){
+      matrix(stats::coef(lm_s)["(Intercept)"]/(length(seasons) + 1) +
+               c(as.matrix(ff[, paste0(c("sin", "cos"), x), with = FALSE]) %*%
+                   matrix(stats::coef(lm_s)[paste0(c("sin", "cos"), x)], ncol = 1)),
              ncol = 1)
     })))
-    colnames(prior)[(ncol(prior) - length(harmonics) + 1):ncol(prior)] = paste0("seasonal", floor(harmonics))
+    colnames(prior)[(ncol(prior) - length(seasons) + 1):ncol(prior)] = paste0("seasonal", seasons)
+    prior[, "seasonal" := rowSums(prior[, paste0("seasonal", seasons), with = FALSE])]
+    prior[, "cycle" := seasonalcycle - seasonal - lm_s$residuals]
+    prior[, "remainder" := y - trend - seasonal - cycle]
   }
+  
+  prior[, "seasonal_adj" := trend + remainder]
   return(prior)
 }

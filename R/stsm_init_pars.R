@@ -5,13 +5,17 @@
 #' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). 
 #' @param cycle The period for the longer-term cycle
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
-#' @param harmonics The harmonics to split the seasonality into
+#' @param seasons The seasonal lengths to split the seasonality into
 #' @param prior A data table created by stsm_prior
 #' @import data.table
 #' @return named vector containing the initial parameter estimates for estimation
-stsm_init_pars = function(y, freq, trend, cycle, decomp = "", harmonics = NULL, prior = NULL){
+stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, prior = NULL){
+  if(any(is.na(y))){
+    y = suppressWarnings(imputeTS::na_kalman(y))
+  }
+  
   if(is.null(prior)){
-    prior = stsm_prior(y, freq, decomp, harmonics) 
+    prior = stsm_prior(y, freq, decomp, seasons) 
   }else{
     prior = copy(prior)
   }
@@ -42,7 +46,8 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", harmonics = NULL, 
     }
   }
   
-  arima = tryCatch(forecast::Arima(stats::ts(prior$seasonal_adj - prior$trend, frequency = freq), order = c(2, 0, 1)), 
+  div = max(c(1, sum(sapply(c("cycle", "seasonal"), function(x){grepl(x, decomp)}))))
+  arima = tryCatch(forecast::Arima(stats::ts(prior$cycle + prior$remainder/div, frequency = freq), order = c(2, 0, 1)), 
                    error = function(err){NULL})
   #Cycle parameters
   if(grepl("cycle", decomp)){
@@ -56,34 +61,36 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", harmonics = NULL, 
                  c(0, 0, 0))
       rho = max(Mod(eigen(Fm)$values))
       rho = max(c(0.01, min(c(rho, 1))))
+      sig_c = sqrt(arima$sigma2)
     }else{
       rho = 0.95
+      sig_c = stats::sd(diff(prior$cycle + prior$remainder/div), na.rm = TRUE)
     }
-    par = c(par, rho = rho, lambda = 2*pi/cycle, sig_c = stats::sd(diff(prior$cycle), na.rm = TRUE))
+    par = c(par, rho = rho, lambda = 2*pi/cycle, sig_c = sig_c)
   }else{
     if(!is.null(arima) & length(arima$coef) > 0){
       par = c(par, arima$coef, sig_c = sqrt(arima$sigma2))
     }else{
-      par = c(par, ar1 = 1.25, ar2 = -0.3, ma1 = 0.75, sig_c = stats::sd(diff(prior$cycle)))
+      par = c(par, ar1 = 1.25, ar2 = -0.3, ma1 = 0.75, sig_c = stats::sd(diff(prior$cycle + prior$remainder/div)))
     }
     par = par[names(par) != "ar2"]
   }
   
   #Seasonal parameters
   if(grepl("seasonal", decomp)){
-    par = c(par, sig_s = unname(rep(stats::sd(diff(prior$seasonal), na.rm = TRUE)/sqrt(length(harmonics)), length(harmonics))))
-    names(par)[grepl("sig_s", names(par))] = paste0("sig_s", harmonics)
+    par = c(par, sig_s = unname(rep(stats::sd(diff(prior$seasonal + prior$remainder/div), na.rm = TRUE)/sqrt(length(seasons)), length(seasons))))
+    names(par)[grepl("sig_s", names(par))] = paste0("sig_s", seasons)
   }
-  par = c(par, sig_e = stats::sd(prior$remainder, na.rm = TRUE))
+  par = c(par, sig_e = stats::sd(prior$remainder/div, na.rm = TRUE))
   if(any(par[grepl("sig_", names(par))] <= 0)){
     par[grepl("sig_", names(par))] = ifelse(stats::sd(prior$remainder, na.rm = TRUE) > 0, stats::sd(prior$remainder, na.rm = TRUE), 0.01)
   }
   return(par)
 }
 
-# stsm_init_pars = function(y, freq, trend, cycle, decomp = "", harmonics = NULL, prior = NULL){
+# stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, prior = NULL){
 #   if(is.null(prior)){
-#     prior = stsm_prior(y, freq, decomp, harmonics) 
+#     prior = stsm_prior(y, freq, decomp, seasons) 
 #   }else{
 #     prior = copy(prior)
 #   }
@@ -145,8 +152,8 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", harmonics = NULL, 
 #   
 #   #Seasonal parameters
 #   if(grepl("seasonal", decomp)){
-#     par = c(par, sig_s = unname(rep(sd(diff(prior$seasonal), na.rm = TRUE)/sqrt(length(harmonics)), length(harmonics))))
-#     names(par)[grepl("sig_s", names(par))] = paste0("sig_s", harmonics)
+#     par = c(par, sig_s = unname(rep(sd(diff(prior$seasonal), na.rm = TRUE)/sqrt(length(seasons)), length(seasons))))
+#     names(par)[grepl("sig_s", names(par))] = paste0("sig_s", seasons)
 #   }
 #   
 #   #Capture any non-zero correlations in the error term

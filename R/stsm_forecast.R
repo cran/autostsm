@@ -40,14 +40,17 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #freq = exo = exo.fc = n.hist = NULL
   #plot = plot.decomp = plot.fc = smooth = TRUE
   #dampen_cycle = FALSE
-  if(!is.logical(plot)){
-    stop("plot.decomp must be TRUE or FALSE")
-  }
-  if(!is.logical(plot.decomp)){
-    stop("plot.decomp must be TRUE or FALSE")
-  }
-  if(!is.logical(plot.fc)){
-    stop("plot.fc must be TRUE or FALSE")
+  #stsm_build_dates = autostsm:::stsm_build_dates
+  #stsm_init_vals = autostsm:::stsm_init_vals
+  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  
+  #Bind data.table variables to the global environment
+  fev = extrema = fitted = variable = value = cycle = seasonal = observed = remainder = 
+    forecast = group = NULL
+  
+  #Argument checks
+  if(!all(sapply(c(plot, plot.decomp, plot.fc, smooth, dampen_cycle), is.logical))){
+    stop("plot, plot.decomp, plot.fc, smooth, dampen_cycle must be logical")
   }
   if(n.ahead < 0 | (n.ahead %% 1) != 0){
     stop("n.ahead must be an integer > 0")
@@ -60,6 +63,29 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(ci <= 0 | ci >= 1){
     stop("ci must between 0 and 1. Suggested values are 0.8, 0.9, 0.95, 0.99.")
   }
+  if(!is.null(exo)){
+    if(!(is.data.frame(exo) | is.data.table(exo))){
+      stop("exo must be a data frame or data table")
+    }
+  }
+  if(!is.null(exo.fc)){
+    if(!(is.data.frame(exo.fc) | is.data.table(exo.fc))){
+      stop("exo must be a data frame or data table")
+    }
+  }
+  if(!(is.data.frame(y) | is.data.table(y) | stats::is.ts(y))){
+    stop("y must be a data frame or data table")
+  }else{
+    y = as.data.table(y)
+    if(ncol(y) != 2){
+      stop("y must have two columns")
+    }else if(!all(unlist(lapply(colnames(y), function(x){class(y[, c(x), with = FALSE][[1]])})) %in% 
+                  c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+      stop("y must have a date and numeric column")
+    }
+  }
+  
+  #Assign plot values
   if(plot == TRUE){
     plot.decomp = plot.fc = TRUE
   }
@@ -74,8 +100,10 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(model$freq != y$freq){
     warning("Frequency of data is different than the model. Defaulting to the model frequency")
     freq = model$freq
+    standard_freq = model$standard_freq
   }else{
     freq = y$freq
+    standard_freq = y$standard_freq
   }
   y = y$data
   
@@ -115,6 +143,8 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     }
   }
   
+  #Set n.hist to the minimum of the length of the data or 3 times the frequency of the data if it is not specified
+  #or longer than th length of the data and plotting is set to TRUE
   if(plot.fc == TRUE){
     if(is.null(n.hist) | ifelse(!is.null(n.hist), n.hist > length(y), FALSE)){
       n.hist = min(c(length(y), floor(freq*3)))
@@ -134,22 +164,27 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #Get model specifications
   decomp = model$decomp
   trend = model$trend
-  if(!is.na(model$harmonics)){
-    harmonics = as.numeric(strsplit(model$harmonics, ", ")[[1]])
+  if(!is.na(model$seasons)){
+    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
   }else{
-    harmonics = c()
+    seasons = c()
+  }
+  if(!is.na(model$cycle)){
+    cycle = model$cycle
+  }else{
+    cycle = c()
   }
   
   #Get the coefficients
   par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, harmonics)
+  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
   
   #Filter and smooth the data
-  sp = stsm_ssm(par = par, yt = y, freq = freq, decomp = decomp, trend = trend, init = init)
-  B_tt = kalman_filter(B0 = matrix(sp$B0, ncol = 1), P0 = sp$P0, Dt = sp$Dt, At = sp$At, Ft = sp$Ft, Ht = sp$Ht, Qt = sp$Qt, Rt = sp$Rt,
-                       yt = matrix(y, nrow = 1), X = X, beta = sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
+  sp = stsm_ssm(par, y, decomp, trend, init)
+  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dt, sp$At, sp$Ft, sp$Ht, sp$Qt, sp$Rt,
+                       matrix(y, nrow = 1), X, sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
   if(smooth == TRUE){
-    B_tt = kalman_smoother(B_tl = B_tt$B_tl, B_tt = B_tt$B_tt, P_tl = B_tt$P_tl, P_tt = B_tt$P_tt, Ft = sp$Ft)$B_tt
+    B_tt = kalman_smoother(B_tt$B_tl, B_tt$B_tt, B_tt$P_tl, B_tt$P_tt, sp$Ft)$B_tt
   }else{
     B_tt = B_tt$B_tt
   }
@@ -162,8 +197,6 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
                       matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, 1:length(y)])
 
   #Forecast
-  fev = extrema = fitted = variable = value = cycle = seasonal = observed = remainder = 
-    forecast = group = NULL
   if(n.ahead > 0){
     Fm_pow = diag(nrow(sp$Ft))
     for(j in 1:n.ahead){
@@ -217,51 +250,85 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     series[!is.na(fev), paste0((1/2 + ci/2)*100, "%") := stats::qnorm(1/2 + ci/2, fitted, sqrt(fev))]
     series[length(y), c(paste0((1/2 - ci/2)*100, "%"), paste0((1/2 + ci/2)*100, "%")) := fitted]
     
-    #Create envelope around seasonal fluctuations in the confidence intervals
-    if(!is.null(harmonics) & all(!is.na(harmonics)) & length(harmonics) > 0){
-      series[, "rn" := 1:.N]
-      series = melt(series, id.vars = "rn")
-      series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-             "smooth" := stats::predict(stats::smooth.spline(value))$y, 
-             by = "variable"]
-      series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-              "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))), 
-                                    FUN = max), 
-              by = "variable"]
-      series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-              "shift" := nafill(shift, type = "locf"), 
-              by = "variable"]
-      series = series[.N:1, ]
-      series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-              "shift" := nafill(shift, type = "locf"), 
-              by = "variable"]
-      series = series[.N:1, ]
-      series[variable == paste0((1/2 + ci/2)*100, "%"), "value" := smooth + shift]
-      series[variable == paste0((1/2 - ci/2)*100, "%"), "value" := smooth - shift]
-      series = dcast(series, "rn ~ variable", value.var = "value")
-      series[, "rn" := NULL]
-    }
+  #   #Create envelope around seasonal fluctuations in the confidence intervals
+  #   if(!is.null(seasons) & all(!is.na(seasons)) & length(seasons) > 0){
+  #     series[, "rn" := 1:.N]
+  #     series = melt(series, id.vars = "rn")
+  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
+  #            "smooth" := stats::predict(stats::smooth.spline(value))$y, 
+  #            by = "variable"]
+  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
+  #             "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))), 
+  #                                   FUN = max), 
+  #             by = "variable"]
+  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
+  #             "shift" := nafill(shift, type = "locf"), 
+  #             by = "variable"]
+  #     series = series[.N:1, ]
+  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
+  #             "shift" := nafill(shift, type = "locf"), 
+  #             by = "variable"]
+  #     series = series[.N:1, ]
+  #     series[variable == paste0((1/2 + ci/2)*100, "%"), "value" := smooth + shift]
+  #     series[variable == paste0((1/2 - ci/2)*100, "%"), "value" := smooth - shift]
+  #     series = dcast(series, "rn ~ variable", value.var = "value")
+  #     series[, "rn" := NULL]
+  #   }
     series[, "fev" := NULL]
     rm(Fm_pow)
   }
   
-  #Set the forecast dates
+  #Build the forecast dates
   `%m+%` = lubridate::`%m+%`
   if(n.ahead > 0){
     y.fc = c(sp$At[1, ] + sp$Ht %*% t(as.matrix(series[(length(y) + 1):.N, rownames(B_tt), with = FALSE])))
-    if(floor(freq) == 365){
-      dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
-    }else if(floor(freq) == 260){
-      dates.fc = dates[length(dates)] %m+% lubridate::days(1:ceiling(n.ahead*2))
-      dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
-    }else if(floor(freq) == 52){
-      dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
-    }else if(floor(freq) == 12){
-      dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
-    }else if(floor(freq) == 4){
-      dates.fc = dates[length(dates)] %m+% months((1:n.ahead)*3)
-    }else if(floor(freq) == 1){
-      dates.fc = dates[length(dates)] %m+% lubridate::years(1:n.ahead)
+    if(standard_freq == TRUE){
+      if(floor(freq) == floor(60*60*24*365.25)){
+        #Secondly frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::seconds(1:n.ahead)
+      }else if(floor(freq) == floor(60*60*24*365.25*5/7)){
+        #Secondly frequency, weekdays only
+        dates.fc = dates[length(dates)] %m+% lubridate::seconds(1:n.ahead*2)
+        dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
+      }else if(floor(freq) == floor(60*24*365.25)){
+        #Minutely frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::minutes(1:n.ahead)
+      }else if(floor(freq) == floor(60*24*365.25*5/7)){
+        #Minutely frequency, weekday only
+        dates.fc = dates[length(dates)] %m+% lubridate::minutes(1:n.ahead)
+        dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
+      }else if(floor(freq) == floor(24*365.25)){
+        #Hourly frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::hours(1:n.ahead)
+      }else if(floor(freq) == floor(24*365.25*5/7)){
+        #Hourly frequency, weekday only
+        dates.fc = dates[length(dates)] %m+% lubridate::hours(1:n.ahead)
+        dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
+      }else if(floor(freq) == 365){
+        #Daily frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
+      }else if(floor(freq) == floor(365.25*5/7)){
+        #Daily frequency, weekday only
+        dates.fc = dates[length(dates)] %m+% lubridate::days(1:ceiling(n.ahead*2))
+        dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
+      }else if(floor(freq) == 52){
+        #Weekly frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
+      }else if(floor(freq) == 12){
+        #Monthly frequency
+        dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
+      }else if(floor(freq) == 4){
+        #Quarterly frequency
+        dates.fc = dates[length(dates)] %m+% months((1:n.ahead)*3)
+      }else if(floor(freq) == 1){
+        #Yearly frequency
+        dates.fc = dates[length(dates)] %m+% lubridate::years(1:n.ahead)
+      }
+    }else{
+      #Non-standard frequencies
+      dates.dt = data.table(date = dates)[, "diff" := difftime(date, shift(date, type = "lag", n = 1), units = "days")]
+      interval = as.numeric(mean(dates.dt$diff, na.rm = T))
+      dates.fc = dates[length(dates)] + as.difftime(seq(interval, as.numeric(interval*n.ahead), interval), units = "days")
     }
   }else{
     y.fc = NULL
@@ -356,16 +423,18 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     g[["cycle"]] = ggplot(data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = c("cycle"))) +
       labs(title = "Cycle", x = "", y = "") +
       geom_line(aes(x = date, y = value, group = variable, color = variable)) +
+      geom_hline(aes(yintercept = ifelse(model$multiplicative == TRUE, 1, 0)), color = "black") + 
       scale_color_viridis_d() +
       theme_minimal() + guides(color = guide_legend(title = NULL)) +
       theme(legend.position = "bottom")
     
     if(grepl("seasonal", decomp)){
-      seas_plot = data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = colnames(final)[colnames(final) %in% c("seasonal", paste0("seasonal", round(harmonics)))])
-      seas_plot[, "variable" := factor(variable, levels = c("seasonal", rev(sort(paste0("seasonal", round(harmonics))))), ordered = TRUE)]
+      seas_plot = data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = colnames(final)[colnames(final) %in% c("seasonal", paste0("seasonal", seasons))])
+      seas_plot[, "variable" := factor(variable, levels = c("seasonal", rev(sort(paste0("seasonal", seasons)))), ordered = TRUE)]
       g[["seasonal"]] = ggplot(seas_plot) +
         labs(title = "Seasonal", x = "", y = "") +
         geom_line(aes(x = date, y = value, group = variable, color = variable)) +
+        geom_hline(aes(yintercept = ifelse(model$multiplicative == TRUE, 1, 0)), color = "black") + 
         scale_color_viridis_d() +
         theme_minimal() + guides(color = guide_legend(title = NULL)) +
         theme(legend.position = "bottom")
@@ -376,6 +445,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       g[["remainder"]] = ggplot(data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = c("remainder"))) +
         labs(title = "Remainder", x = "", y = "") +
         geom_line(aes(x = date, y = value, group = variable, color = variable)) +
+        geom_hline(aes(yintercept = ifelse(model$multiplicative == TRUE, 1, 0)), color = "black") + 
         scale_color_viridis_d() +
         theme_minimal() + guides(color = guide_legend(title = NULL)) +
         theme(legend.position = "bottom")

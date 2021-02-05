@@ -5,19 +5,23 @@
 #' @param freq Frequency of the data
 #' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). 
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
-#' @param harmonics The harmonics to split the seasonality into
+#' @param seasons The seasonal periods to split the seasonality into
 #' @param prior A data table created by stsm_prior
+#' @param cycle The cycle period
 #' @import data.table
 #' @return list containing the initial values for the Kalman filter
-stsm_init_vals = function(y, par, freq, trend, decomp = "", harmonics = NULL, prior = NULL){
+stsm_init_vals = function(y, par, freq, trend, decomp = "", seasons = NULL, prior = NULL, cycle = NULL){
+  #Bind data.table variables to the global environment
+  drift = remainder = NULL
+  
+  #Build the prior
   if(is.null(prior)){
-    prior = stsm_prior(y, freq, decomp, harmonics) 
+    prior = stsm_prior(y, freq, decomp, seasons, cycle) 
   }else{
     prior = copy(prior)
   }
   
-  cycle = drift = remainder = NULL
-  sp = stsm_ssm(par = par, yt = y, freq = freq, decomp = decomp, trend = trend)
+  sp = stsm_ssm(par, y, decomp, trend)
   init = list(B0 = sp$B0, P0 = sp$P0)
   if("trend" %in% colnames(prior)){
     init[["B0"]][names(init[["B0"]]) == "Tt0"] = prior[!is.na(trend), ]$trend[1]
@@ -32,10 +36,10 @@ stsm_init_vals = function(y, par, freq, trend, decomp = "", harmonics = NULL, pr
     init[["B0"]][names(init[["B0"]]) == "et0"] = prior[!is.na(remainder), ]$remainder[1]
   }
   if(grepl("seasonal", decomp)){
-    if(!is.null(harmonics)){
-      for(j in harmonics){
+    if(!is.null(seasons)){
+      for(j in seasons){
         init[["B0"]][names(init[["B0"]]) %in% paste0(c("St", "Sts"), j)] = 
-          prior[!is.na(eval(parse(text = paste0("seasonal", floor(j))))), c(paste0("seasonal", floor(j))), with = FALSE][[1]][1]
+          prior[!is.na(eval(parse(text = paste0("seasonal", j)))), c(paste0("seasonal", j)), with = FALSE][[1]][1]
       }
     }
   }
