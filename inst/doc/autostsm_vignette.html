@@ -718,21 +718,22 @@ FEV = \left(\sum_{i=0}^{j-1} H F^i Q F^{i\prime} H^{\prime}\right) + R
 <span id="cb1-64"><a href="#cb1-64"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
 <span id="cb1-65"><a href="#cb1-65"></a><span class="kw">grid.arrange</span>(g1, g2, g3, <span class="dt">layout_matrix =</span> <span class="kw">rbind</span>(<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">3</span>)))</span>
 <span id="cb1-66"><a href="#cb1-66"></a></span>
-<span id="cb1-67"><a href="#cb1-67"></a><span class="co">#Estimate the model</span></span>
-<span id="cb1-68"><a href="#cb1-68"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>])</span>
-<span id="cb1-69"><a href="#cb1-69"></a></span>
-<span id="cb1-70"><a href="#cb1-70"></a><span class="co">#Forecast and plot the results</span></span>
-<span id="cb1-71"><a href="#cb1-71"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb1-72"><a href="#cb1-72"></a></span>
-<span id="cb1-73"><a href="#cb1-73"></a><span class="co">#Detect anomalies</span></span>
-<span id="cb1-74"><a href="#cb1-74"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb1-75"><a href="#cb1-75"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb1-76"><a href="#cb1-76"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb1-77"><a href="#cb1-77"></a></span>
-<span id="cb1-78"><a href="#cb1-78"></a><span class="co">#Detect structural breaks</span></span>
-<span id="cb1-79"><a href="#cb1-79"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb1-80"><a href="#cb1-80"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb1-81"><a href="#cb1-81"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<span id="cb1-67"><a href="#cb1-67"></a></span>
+<span id="cb1-68"><a href="#cb1-68"></a><span class="co">#Estimate the model</span></span>
+<span id="cb1-69"><a href="#cb1-69"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>])</span>
+<span id="cb1-70"><a href="#cb1-70"></a></span>
+<span id="cb1-71"><a href="#cb1-71"></a><span class="co">#Forecast and plot the results</span></span>
+<span id="cb1-72"><a href="#cb1-72"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb1-73"><a href="#cb1-73"></a></span>
+<span id="cb1-74"><a href="#cb1-74"></a><span class="co">#Detect anomalies</span></span>
+<span id="cb1-75"><a href="#cb1-75"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
+<span id="cb1-76"><a href="#cb1-76"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
+<span id="cb1-77"><a href="#cb1-77"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb1-78"><a href="#cb1-78"></a></span>
+<span id="cb1-79"><a href="#cb1-79"></a><span class="co">#Detect structural breaks</span></span>
+<span id="cb1-80"><a href="#cb1-80"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
+<span id="cb1-81"><a href="#cb1-81"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
+<span id="cb1-82"><a href="#cb1-82"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="case-2-real-data-examples" class="section level2">
 <h2>Case 2: Real Data Examples</h2>

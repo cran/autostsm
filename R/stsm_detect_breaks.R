@@ -39,6 +39,9 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   #components = c("trend", "cycle", "seasonal")
   #stsm_build_dates = autostsm:::stsm_build_dates
   #stsm_init_vals = autostsm:::stsm_init_vals
+  #stsm_check_y = autostsm:::stsm_check_y
+  #stsm_check_exo = autostsm:::stsm_check_exo
+  #stsm_format_exo = autostsm:::stsm_format_exo
   #Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
@@ -65,22 +68,6 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   if(!all(sapply(c(smooth, plot, show_progress), is.logical))){
     stop("smooth, plot, show_progress must be logical")
   }
-  if(!is.null(exo)){
-    if(!(is.data.frame(exo) | is.data.table(exo))){
-      stop("exo must be a data frame or data table")
-    }
-  }
-  if(!(is.data.frame(y) | is.data.table(y) | stats::is.ts(y))){
-    stop("y must be a data frame or data table")
-  }else{
-    y = as.data.table(y)
-    if(ncol(y) != 2){
-      stop("y must have two columns")
-    }else if(!all(unlist(lapply(colnames(y), function(x){class(y[, c(x), with = FALSE][[1]])})) %in% 
-                  c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
-      stop("y must have a date and numeric column")
-    }
-  }
   if(!all(components %in% c("trend", "cycle", "seasonal"))){
     stop("components must be trend, cycle, seasonal.")
   }
@@ -89,6 +76,8 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
       stop("freq must be numeric")
     }
   }
+  stsm_check_y(y)
+  stsm_check_exo(exo, y)
   
   #Get the frequency of the data
   y = stsm_detect_frequency(y, freq)
@@ -106,9 +95,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   range = which(!is.na(y))
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
-  if(!is.null(exo)){
-    exo = exo[range[1]:range[length(range)], ]
-  }
+  exo = stsm_format_exo(exo, dates, range)
   
   #Set the historical exogenous variables
   if(is.null(exo)){

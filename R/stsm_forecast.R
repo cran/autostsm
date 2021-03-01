@@ -42,6 +42,10 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #dampen_cycle = FALSE
   #stsm_build_dates = autostsm:::stsm_build_dates
   #stsm_init_vals = autostsm:::stsm_init_vals
+  #stsm_check_y = autostsm:::stsm_check_y
+  #stsm_check_exo = autostsm:::stsm_check_exo
+  #stsm_check_exo_fc = autostsm:::stsm_check_exo_fc
+  #stsm_format_exo = autostsm:::stsm_format_exo
   #Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
@@ -63,27 +67,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(ci <= 0 | ci >= 1){
     stop("ci must between 0 and 1. Suggested values are 0.8, 0.9, 0.95, 0.99.")
   }
-  if(!is.null(exo)){
-    if(!(is.data.frame(exo) | is.data.table(exo))){
-      stop("exo must be a data frame or data table")
-    }
-  }
-  if(!is.null(exo.fc)){
-    if(!(is.data.frame(exo.fc) | is.data.table(exo.fc))){
-      stop("exo must be a data frame or data table")
-    }
-  }
-  if(!(is.data.frame(y) | is.data.table(y) | stats::is.ts(y))){
-    stop("y must be a data frame or data table")
-  }else{
-    y = as.data.table(y)
-    if(ncol(y) != 2){
-      stop("y must have two columns")
-    }else if(!all(unlist(lapply(colnames(y), function(x){class(y[, c(x), with = FALSE][[1]])})) %in% 
-                  c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
-      stop("y must have a date and numeric column")
-    }
-  }
+  stsm_check_y(y)
+  stsm_check_exo(exo, y)
+  stsm_check_exo_fc(exo.fc, n.ahead)
   
   #Assign plot values
   if(plot == TRUE){
@@ -111,9 +97,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   range = which(!is.na(y))
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
-  if(!is.null(exo)){
-    exo = exo[range[1]:range[length(range)], ]
-  }
+  exo = stsm_format_exo(exo, dates, range)
   
   #Set the historical exogenous variables
   if(is.null(exo)){
@@ -129,10 +113,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     if(is.null(exo)){
       warning("exo.fc is supplied but exo is not. Not using exo.")
     }else{
-      if(ncol(exo.fc) != n.ahead){
-        stop("nrow of exo.fc does not equal n.ahead.")
-      }
-      X = cbind(X, exo.fc)
+      exo.fc = as.data.table(exo.fc)
+      exo.fc = exo.fc[, names(which(unlist(exo.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
+      X = cbind(X, t(exo.fc))
       if(ncol(X) != length(y) + n.ahead){
         stop("nrow of exo + exo.fc does not equal length of y + n.ahead.")
       }
@@ -371,8 +354,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   #Set the exogenous
   if(!is.null(exo)){
-    XB = do.call("cbind", lapply(names(par)[grepl("beta_", names(par))], function(x){
-      par[x]*X[gsub("beta_", "", x), ]
+    XB = do.call("cbind", lapply(1:nrow(X), function(x){
+      name = names(par)[grepl("beta_", names(par))][x]
+      par[name]*X[x, ]
     }))
     colnames(XB) = rownames(X)
     series = cbind(series, XB)
@@ -401,7 +385,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   cols = colnames(final)[colnames(final) %in% c("observed", "trend", "fitted", paste0((1/2 + c(-ci, ci)/2)*100, "%")) | grepl("_adjusted", colnames(final))]
   final[, c(cols) := lapply(.SD, function(x){x*sd + mean}), .SDcols = c(cols)]
   
-  cols = colnames(final)[!colnames(final) %in% c("date", cols)]
+  cols = colnames(final)[!colnames(final) %in% c("date", cols, rownames(X))]
   final[,  c(cols) := lapply(.SD, function(x){x*sd}), .SDcols = c(cols)]
   
   if(model$multiplicative == TRUE){
