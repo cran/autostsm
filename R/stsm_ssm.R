@@ -49,21 +49,21 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     #T_t = T_{t-1} + e_t, e_t ~ N(0, sig_t^2)
     #Transition matrix
     Fm = matrix(c(1), nrow = 1, ncol = 1)
-    colnames(Fm) = "Tt1"
-    rownames(Fm) = "Tt0"
+    colnames(Fm) = "Tt_1"
+    rownames(Fm) = "Tt_0"
     #Observation matrix
     Hm = matrix(c(1), nrow = 1)
     colnames(Hm) = rownames(Fm)
   }else if(trend %in% c("random-walk-drift", "double-random-walk")){
     #T_t = M_{t-1} + T_{t-1} + e_t, e_t ~ N(0, sig_t^2)
-    #M_t = M_{t-1} + n_t, n_t ~ N(0, sig_m^2)
+    #D_t = D_{t-1} + n_t, n_t ~ N(0, sig_d^2)
     #Transition matrix
     Fm = rbind(c(1, 1),
                c(0, 1))
-    colnames(Fm) = c("Tt1", "Mt1")
-    rownames(Fm) = c("Tt0", "Mt0")
+    colnames(Fm) = c("Tt_1", "Dt_1")
+    rownames(Fm) = c("Tt_0", "Dt_0")
     if(trend == "random-walk-drift"){
-      Fm["Mt0", "Mt1"] = par["phi"]
+      Fm["Dt_0", "Dt_1"] = par["phi_d"]
     }
     #Observation matrix
     Hm = matrix(c(1, 0), nrow = 1)
@@ -73,8 +73,8 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     #Transition matrix
     Fm = rbind(c(2, -1),
                c(1, 0))
-    colnames(Fm) = c("Tt1", "Tt2")
-    rownames(Fm) = c("Tt0", "Tt1")
+    colnames(Fm) = c("Tt_1", "Tt_2")
+    rownames(Fm) = c("Tt_0", "Tt_1")
     #Observation matrix
     Hm = matrix(c(1, 0), nrow = 1)
     colnames(Hm) = rownames(Fm)
@@ -91,36 +91,60 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   #Define the transition error covariance matrix
   Qm = matrix(0, nrow = nrow(Fm), ncol = ncol(Fm))
   colnames(Qm) = rownames(Qm) = rownames(Fm)
-  Qm[rownames(Qm) == "Tt0", colnames(Qm) == "Tt0"] = par["sig_t"]^2
-  Qm[rownames(Qm) == "Mt0", colnames(Qm) == "Mt0"] = par["sig_m"]^2
+  Qm[rownames(Qm) == "Tt_0", colnames(Qm) == "Tt_0"] = par["sig_t"]^2
+  Qm[rownames(Qm) == "Dt_0", colnames(Qm) == "Dt_0"] = par["sig_d"]^2
   
   #Define the cycle component
   if(grepl("cycle", decomp)){
-    Cm = par["rho"]*rbind(c(cos(par["lambda"]), sin(par["lambda"])),
+    Cm = par["phi_c"]*rbind(c(cos(par["lambda"]), sin(par["lambda"])),
                           c(-sin(par["lambda"]), cos(par["lambda"])))
-    colnames(Cm) = c("Ctl", "Ctsl")
-    rownames(Cm) = c("Ct", "Cts")
+    colnames(Cm) = c("Ct_1", "Cts_1")
+    rownames(Cm) = c("Ct_0", "Cts_0")
     Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
                 dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
     Hm = cbind(Hm, matrix(c(1, 0), nrow = 1))
     colnames(Hm) = rownames(Fm)
     Qm = as.matrix(Matrix::bdiag(Qm, diag(2)*par["sig_c"]^2))
     colnames(Qm) = rownames(Qm) = rownames(Fm)
-  }else if("ar1" %in% names(par) | "ma1" %in% names(par)){
-    #Define the ARMA part of the noise component
-    par["ar2"] = -par["ar1"]^2/4
-    Cm = rbind(par[c("ar1", "ar2", "ma1")])
-    Cm = matrix(rbind(Cm,
-               cbind(diag(2)*c(1, 0), matrix(0, nrow = 2, ncol = 1))),
-               ncol = ncol(Cm), dimnames = list(NULL, colnames(Cm)))
-    rownames(Cm) = c("Ct", "Ctl", "et")
-    colnames(Cm) = c("Ctl", "Ctl2", "etl")
+  }else if(sum(grepl("phi_c\\.\\d+|theta_c\\.\\d+", names(par))) > 0){
+    #Define the ARMA part of the cycle/noise component
+    par["phi_c.2"] = -par["phi_c.1"]^2/4
+    len = sum(grepl("phi_c\\.\\d+|theta_c\\.\\d+", names(par))) 
+    Cm = rbind(par[grepl("phi_c|theta_c", names(par))], 
+               matrix(0, nrow = len - 1, ncol = len))
+    colnames_c = rownames_c = c()
+    if(sum(grepl("phi_c", names(par))) > 0){
+      colnames_c = c(colnames_c, paste0("Ct_", gsub("phi_c\\.", "", names(par)[grepl("phi_c\\.\\d+", names(par))])))
+      rownames_c = c(rownames_c, paste0("Ct_", as.numeric(gsub("phi_c\\.", "", names(par)[grepl("phi_c\\.\\d+", names(par))])) - 1))
+    }
+    if(sum(grepl("theta_c", names(par))) > 0){
+      colnames_c = c(colnames_c, paste0("et_", gsub("theta_c\\.", "", names(par)[grepl("theta_c\\.\\d+", names(par))])))
+      rownames_c = c(rownames_c, paste0("et_", as.numeric(gsub("theta_c\\.", "", names(par)[grepl("theta_c\\.\\d+", names(par))])) - 1))
+    }
+    colnames(Cm) = colnames_c
+    rownames(Cm) = rownames_c
+    
+    Cm[rownames(Cm) %in% colnames(Cm), colnames(Cm) %in% rownames(Cm)] = diag(sum(rownames(Cm) %in% colnames(Cm)))
     Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
                 dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
-    Hm = cbind(Hm, matrix(as.numeric(rownames(Cm) == "Ct"), nrow = 1))
+    Hm = tryCatch(cbind(Hm, matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1)), 
+                  error = function(err){matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1)})
     colnames(Hm) = rownames(Fm)
-    Qm = as.matrix(Matrix::bdiag(Qm, diag(as.numeric(rownames(Cm) %in% c("Ct", "et"))*par["sig_c"]^2)))
+    Qm = as.matrix(Matrix::bdiag(Qm, diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0"))*par["sig_c"]^2)))
     colnames(Qm) = rownames(Qm) = rownames(Fm)
+    
+    # Cm = rbind(par[c("phi_c.1", "phi_c.2", "theta_c.1")])
+    # Cm = matrix(rbind(Cm,
+    #            cbind(diag(2)*c(1, 0), matrix(0, nrow = 2, ncol = 1))),
+    #            ncol = ncol(Cm), dimnames = list(NULL, colnames(Cm)))
+    # rownames(Cm) = c("Ct_0", "Ct_1", "et_0")
+    # colnames(Cm) = c("Ct_1", "Ct_2", "et_1")
+    # Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
+    #             dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
+    # Hm = cbind(Hm, matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1))
+    # colnames(Hm) = rownames(Fm)
+    # Qm = as.matrix(Matrix::bdiag(Qm, diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0"))*par["sig_c"]^2)))
+    # colnames(Qm) = rownames(Qm) = rownames(Fm)
   }
   
   #Define the seasonal component
@@ -132,8 +156,8 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
       Sm = rbind(c(cos(2*pi*1/j), sin(2*pi*1/j)),
                  c(-sin(2*pi*1/j), cos(2*pi*1/j)))
       Fm = as.matrix(Matrix::bdiag(Fm, Sm))
-      colnames(Fm) = c(colnames, paste0("Stl", j), paste0("Stls", j))
-      rownames(Fm) = c(rownames, paste0("St", j), paste0("Sts", j))
+      colnames(Fm) = c(colnames, paste0("St", j, "_1"), paste0("Sts", j, "_1"))
+      rownames(Fm) = c(rownames, paste0("St", j, "_0"), paste0("Sts", j, "_0"))
     }
     Hm = cbind(Hm, matrix(rep(c(1, 0), length(jiter)), nrow = 1))
     colnames(Hm) = rownames(Fm)
@@ -144,7 +168,7 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   #Transition equation intercept matrix
   Dm = matrix(0, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
   if(trend == "random-walk-drift"){
-    Dm[rownames(Dm) == "Mt0", ] = par["d"]
+    Dm[rownames(Dm) == "Dt_0", ] = par["d"]
   }
   
   #Observation equation intercept matrix
@@ -174,89 +198,5 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     P0 = diag(ifelse(ncol(yt) > 2, stats::var(c(yt), na.rm = TRUE), 100), nrow = nrow(Fm), ncol = nrow(Fm))
     rownames(P0) = colnames(P0) = rownames(Fm)
   }
-  return(list(B0 = B0, P0 = P0, At = Am, Dt = Dm, Ht = Hm, Ft = Fm, Rt = Rm, Qt = Qm, beta = beta))
+  return(list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta))
 }
-
-
-# hp_filter = function(y, freq, trend){
-#   hp_objective = function(par, y, freq, trend, lambda){
-#     if(trend == "random-walk"){
-#       par["sig_e"] = sqrt(lambda*par["sig_t"]^2)
-#     }else if(trend == "random-walk2"){
-#       par["sig_e"] = sqrt(lambda*par["sig_t"]^2)
-#     }else if(trend == "random-walk-drift"){
-#       par["sig_e"] = sqrt(lambda*(par["sig_t"]^2 + par["sig_m"]^2/(1 - par["phi"]^2)))
-#     }else if(trend == "double-random-walk"){
-#       par["sig_e"] = sqrt(lambda*(par["sig_t"]^2 + par["sig_m"]^2))
-#     }
-#     ssm = stsm_ssm(par, y, freq = freq, trend = trend, decomp = "trend-noise")
-#     return(kalman_filter(B0 = matrix(ssm$B0, nrow = nrow(ssm$Ft), ncol = 1), P0 = diag(nrow(ssm$Qt))*100, 
-#                          Dt = ssm$Dt, At = ssm$At, Ft = ssm$Ft, Ht = ssm$Ht, 
-#                          Qt = ssm$Qt, Rt = ssm$Rt, yt = matrix(y, nrow = 1), 
-#                          X = matrix(0, nrow = 1, ncol = length(y)), 
-#                          beta = matrix(0, nrow = 1, ncol = 1))$loglik)
-#   }
-#   
-#   #Trend and drift parameters
-#   lambda = 1600*(freq/4)^4
-#   if(trend == "random-walk"){
-#     par = c(sig_t = sqrt(var(diff(y), na.rm = TRUE)/(1 + 2*lambda)))
-#   }else if(trend == "random-walk2"){
-#     par = c(sig_t = sqrt(var(diff(diff(y)), na.rm = TRUE)/(1 + 6*lambda)))
-#   }else if(trend == "random-walk-drift"){
-#     par = c(phi = 0.5, d = mean(diff(y), na.rm = TRUE)*(1 - 0.5))
-#     par["sig_m"] = par["sig_t"] = sqrt(var(diff(y), na.rm = TRUE)/(1 + 2*lambda)*(1 - par["phi"]^2)/(2 - par["phi"]^2))
-#   }else if(trend == "double-random-walk"){
-#     par["sig_m"] = par["sig_t"] = sqrt(var(diff(diff(y)), na.rm = TRUE)/8)
-#   }
-#   
-#   ineqA = matrix(0, ncol = length(par), nrow = sum(grepl("sig_", names(par))), dimnames = list(NULL, names(par)))
-#   ineqA[, grepl("sig_", names(par))] = diag(sum(grepl("sig_", names(par))))
-#   ineqB = matrix(0, ncol = 1, nrow = nrow(ineqA))
-#   constraints = list(ineqA = ineqA, ineqB = ineqB)
-#   if("d" %in% names(par) & saturating_growth == FALSE){
-#     #The drift constant must be the sign of the prior
-#     ineqA = matrix(0, nrow = 1, ncol = length(par), 
-#                    dimnames = list(NULL, names(par)))
-#     ineqA[, "d"] = sign(par["d"]) #constrain do to be sign of the prior
-#     ineqB = matrix(0, nrow = nrow(ineqA))
-#     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
-#     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-#   }
-#   if("phi" %in% names(par)){
-#     #The drift must be stationary
-#     ineqA = matrix(0, nrow = 2, ncol = length(par), 
-#                    dimnames = list(NULL, names(par)))
-#     ineqA[, "phi"] = c(1, -1)
-#     ineqB = matrix(c(0, 1), ncol = 1)
-#     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
-#     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-#   }
-#   
-#   hp_out = maxLik::maxLik(logLik = hp_objective,
-#                           start = par, method = "BFGS", constraints = constraints,
-#                           finalHessian = FALSE, hess = NULL, control = list(printLevel = 0, iterlim = 10000), 
-#                           y = y, freq = freq, trend = trend, lambda = lambda)
-#   if(trend == "random-walk"){
-#     hp_out$estimate["sig_e"] = sqrt(lambda*hp_out$estimate["sig_t"]^2)
-#   }else if(trend == "random-walk2"){
-#     hp_out$estimate["sig_e"] = sqrt(lambda*hp_out$estimate["sig_t"]^2)
-#   }else if(trend == "random-walk-drift"){
-#     hp_out$estimate["sig_e"] = sqrt(lambda*(hp_out$estimate["sig_t"]^2 + hp_out$estimate["sig_m"]^2/(1 - hp_out$estimate["phi"]^2)))
-#   }else if(trend == "double-random-walk"){
-#     hp_out$estimate["sig_e"] = sqrt(lambda*(hp_out$estimate["sig_t"]^2 + hp_out$estimate["sig_m"]^2))
-#   }
-#   
-#   ssm = stsm_ssm(hp_out$estimate, y, freq = freq, trend = trend, decomp = "trend-noise")
-#   filter = kalman_filter(B0 = matrix(ssm$B0, nrow = 2, ncol = 1), P0 = diag(nrow(ssm$Qt))*100, 
-#                          Dt = ssm$Dt, At = ssm$At, Ft = ssm$Ft, Ht = ssm$Ht, 
-#                          Qt = ssm$Qt, Rt = ssm$Rt, yt = matrix(y, nrow = 1), 
-#                          X = matrix(0, nrow = 1, ncol = length(y)), 
-#                          beta = matrix(0, nrow = 1, ncol = 1))
-#   smooth = kalman_smoother(B_tl = filter$B_tl, B_tt = filter$B_tt, 
-#                            P_tl = filter$P_tl, P_tt = filter$P_tt, 
-#                            Ft = ssm$Ft)
-#   # ts.plot(ts(y), ts(filter$B_tt[1, ]), col = c("black", "red"))
-#   # ts.plot(ts(y), ts(smooth$B_tt[1, ]), col = c("black", "red"))
-#   return(c(smooth$B_tt[1, ]))
-# }

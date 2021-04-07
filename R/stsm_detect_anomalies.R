@@ -116,27 +116,22 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   
   #Filter and smooth the data
   sp = stsm_ssm(par, y, decomp, trend, init)
-  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dt, sp$At, sp$Ft, sp$Ht, sp$Qt, sp$Rt,
-                       matrix(y, nrow = 1), X, sp$beta)[c("B_tl", "B_tt", "P_tt", "P_tl")]
-  if(smooth == TRUE){
-    B_tt = kalman_smoother(B_tt$B_tl, B_tt$B_tt, B_tt$P_tl, B_tt$P_tt, sp$Ft)$B_tt
-  }else{
-    B_tt = B_tt$B_tt
-  }
-  rownames(B_tt) = rownames(sp$Ft)
+  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dm, sp$Am, sp$Fm, sp$Hm, sp$Qm, sp$Rm,
+                       matrix(y, nrow = 1), X, sp$beta, smooth)$B_tt
+  rownames(B_tt) = rownames(sp$Fm)
   
   #Get the unobserved series
   series = data.table(t(B_tt))
-  fev = (sp$Ht %*% (sp$Ft %*% sp$Qt %*% t(sp$Ft)) %*% t(sp$Ht)) + sp$Rt
+  fev = (sp$Hm %*% (sp$Fm %*% sp$Qm %*% t(sp$Fm)) %*% t(sp$Hm)) + sp$Rm
   
   #Lag the series
   series.l = copy(series)
   series.l[, colnames(series.l) := lapply(.SD, shift, type = "lag", n = 1), .SDcols = colnames(series.l)]
   
   #Get the model errors
-  pred_uc = (matrix(sp$Dt, nrow = nrow(sp$Dt), ncol = nrow(series)) + 
-               sp$Ft %*% t(as.matrix(series.l[, rownames(B_tt), with = FALSE])))
-  pred = t(matrix(sp$At, nrow = 1, ncol = ncol(pred_uc)) + sp$Ht %*% pred_uc)
+  pred_uc = (matrix(sp$Dm, nrow = nrow(sp$Dm), ncol = nrow(series)) + 
+               sp$Fm %*% t(as.matrix(series.l[, rownames(B_tt), with = FALSE])))
+  pred = t(matrix(sp$Am, nrow = 1, ncol = ncol(pred_uc)) + sp$Hm %*% pred_uc)
   errors = data.table(t(t(as.matrix(series[, rownames(B_tt), with = FALSE])) - pred_uc))
   errors[1:length(y), "pred" := y - pred]
   

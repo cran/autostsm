@@ -22,7 +22,7 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
   for(j in colnames(ineqA)[grepl("sig_", colnames(ineqA))]){
     if(j == "sig_t"){
       det_test = (det_trend == FALSE)
-    }else if(j == "sig_m"){
+    }else if(j == "sig_d"){
       det_test = (det_drift == FALSE)
     }else if(j == "sig_c"){
       det_test = (det_cycle == FALSE)
@@ -48,16 +48,16 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
   }
-  if("phi" %in% names(par)){
+  if("phi_d" %in% names(par)){
     #The drift must be stationary
     ineqA = matrix(0, nrow = 2, ncol = length(par), 
                    dimnames = list(NULL, names(par)))
-    ineqA[, "phi"] = c(1, -1)
+    ineqA[, "phi_d"] = c(1, -1)
     ineqB = matrix(c(0, 1), ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(abs(par["phi"]) >= 1){
-      par["phi"] = 0.95
+    if(abs(par["phi_d"]) >= 1){
+      par["phi_d"] = 0.95
     }
   }
   if("lambda" %in% names(par)){
@@ -72,56 +72,43 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
       par["lambda"] = pi/(2.5*freq)
     }
   }
-  if("rho" %in% names(par)){
+  if("phi_c" %in% names(par)){
     #Damped cycle must be stationary
     ineqA = matrix(0, nrow = 2, ncol = length(par),
                    dimnames = list(NULL, names(par)))
-    ineqA[, "rho"] = c(1, -1)
+    ineqA[, "phi_c"] = c(1, -1)
     ineqB = matrix(c(0, 1), ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(abs(par["rho"]) >= 1){
-      par["rho"] = 0.95
+    if(abs(par["phi_c"]) >= 1){
+      par["phi_c"] = 0.95
     }
   }
-  if("ar1" %in% names(par)){
+  if("phi_c.1" %in% names(par)){
     #AR component must be stationary
     ineqA = matrix(0, nrow = 1, ncol = length(par),
                    dimnames = list(NULL, names(par)))
-    ineqA[, "ar1"] = -1
+    ineqA[, "phi_c.1"] = -1
     ineqB = matrix(2, nrow = 1, ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(par["ar1"] >= 2){
-      par["ar1"] = 1.25
+    if(par["phi_c.1"] >= 2){
+      par["phi_c.1"] = 1.25
     }
-    # ineqA = matrix(0, nrow = 3, ncol = length(par),
-    #                dimnames = list(NULL, names(par)))
-    # ineqA[1:2, names(par)[grepl("ar\\d+", names(par))]] = rbind(rep(1, sum(grepl("ar\\d+", names(par)))), rep(-1, sum(grepl("ar\\d+", names(par)))))
-    # ineqA[3, "ar1"] = -1
-    # ineqB = matrix(c(1, 1, 2), ncol = 1)
-    # constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
-    # constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    # if(par["ar1"] >= 2){
-    #   par["ar1"] = 1.25
-    # }
-    # if(abs(sum(par[grepl("ar\\d+", names(par))])) >= 1){
-    #   par[grepl("ar\\d+", names(par))] = 0.9/sum(grepl("ar\\d+", names(par)))
-    # }
   }
-  if("ma1" %in% names(par)){
+  if("theta_c.1" %in% names(par)){
     #MA component must be stationary
     ineqA = matrix(0, nrow = 2, ncol = length(par),
                    dimnames = list(NULL, names(par)))
-    ineqA[, names(par)[grepl("ma\\d+", names(par))]] = rbind(rep(1, sum(grepl("ma\\d+", names(par)))), rep(-1, sum(grepl("ma\\d+", names(par)))))
+    ineqA[, names(par)[grepl("theta_c\\d+", names(par))]] = rbind(rep(1, sum(grepl("theta_c\\d+", names(par)))), rep(-1, sum(grepl("theta_c\\d+", names(par)))))
     ineqB = matrix(c(1, 1), ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(abs(sum(par[grepl("ma\\d+", names(par))])) >= 1){
-      par[grepl("ma\\d+", names(par))] = -0.9/sum(grepl("ma\\d+", names(par)))
+    if(abs(sum(par[grepl("theta_c\\d+", names(par))])) >= 1){
+      par[grepl("theta_c\\d+", names(par))] = -0.9/sum(grepl("theta_c\\d+", names(par)))
     }
   }
-  if(("sig_m" %in% names(par) | "sig_t" %in% names(par)) & unconstrained == FALSE & saturating_growth == FALSE){
+  if(("sig_d" %in% names(par) | "sig_t" %in% names(par)) & unconstrained == FALSE & saturating_growth == FALSE){
     #The variance of the trend must be the smallest variance component
     ineqA = matrix(0, nrow = ("sig_e" %in% names(par) & det_obs == FALSE) +
                      ("sig_c" %in% names(par) & det_cycle == FALSE) +
@@ -129,15 +116,15 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
                    ncol = length(par), dimnames = list(NULL, names(par)))
      nr = 1
     if("sig_e" %in% names(par) & det_obs == FALSE){
-      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_m", "sig_t")], "sig_e")] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_m", "sig_t"))), 1)
+      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_d", "sig_t")], "sig_e")] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_d", "sig_t"))), 1)
       nr = nr + 1
     }
     if("sig_c" %in% names(par) & det_cycle == FALSE){
-      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_m", "sig_t")], "sig_c")] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_m", "sig_t"))), 1)
+      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_d", "sig_t")], "sig_c")] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_d", "sig_t"))), 1)
       nr = nr + 1
     }
     if(any(grepl("sig_s", names(par))) & det_seas == FALSE){
-      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_m", "sig_t")], colnames(ineqA)[grepl("sig_s", colnames(ineqA))])] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_m", "sig_t"))), rep(1, sum(grepl("sig_s", colnames(ineqA)))))
+      ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_d", "sig_t")], colnames(ineqA)[grepl("sig_s", colnames(ineqA))])] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_d", "sig_t"))), rep(1, sum(grepl("sig_s", colnames(ineqA)))))
     }
     ineqB = matrix(0, nrow = nrow(ineqA), ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
@@ -146,12 +133,12 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
                      ifelse("sig_c" %in% names(par) & det_cycle == FALSE, par["sig_c"], NA),
                      ifelse(any(grepl("sig_s", names(par))) & det_seas == FALSE, par[grepl("sig_s", names(par))], NA)), na.rm = TRUE)
     if(is.finite(test_val)){
-      if(sum(par[names(par) %in% c("sig_m", "sig_t")]) >= test_val){
+      if(sum(par[names(par) %in% c("sig_d", "sig_t")]) >= test_val){
         if("sig_t" %in% names(par) & det_trend == FALSE){
           par["sig_t"] = test_val/2.1
         }
-        if("sig_m" %in% names(par) & det_drift == FALSE){
-          par["sig_m"] = test_val/2.1
+        if("sig_d" %in% names(par) & det_drift == FALSE){
+          par["sig_d"] = test_val/2.1
         }
       }
     }

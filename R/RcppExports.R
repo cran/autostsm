@@ -5,11 +5,11 @@ Rginv <- function(m) {
     .Call(`_autostsm_Rginv`, m)
 }
 
-kalman_filter <- function(B0, P0, Dt, At, Ft, Ht, Qt, Rt, yt, X, beta) {
-    .Call(`_autostsm_kalman_filter`, B0, P0, Dt, At, Ft, Ht, Qt, Rt, yt, X, beta)
+gen_inv <- function(m) {
+    .Call(`_autostsm_gen_inv`, m)
 }
 
-kalman_smoother <- function(B_tl, B_tt, P_tl, P_tt, Ft) {
-    .Call(`_autostsm_kalman_smoother`, B_tl, B_tt, P_tl, P_tt, Ft)
+kalman_filter <- function(B0, P0, Dm, Am, Fm, Hm, Qm, Rm, yt, X, beta, smooth = FALSE) {
+    .Call(`_autostsm_kalman_filter`, B0, P0, Dm, Am, Fm, Hm, Qm, Rm, yt, X, beta, smooth)
 }
 

@@ -29,12 +29,12 @@
 #' "random-walk2" is a 2nd order random walk trend as in the Hodrick-Prescott filter.
 #' If trend is "random-walk", the trend model is T_t = T_{t-1} + e_t, 
 #' e_t ~ N(0, sig_t^2)
-#' If trend is "random-walk-drift", the trend model is T_t = T_{t-1} + M_{t-1} + e_t, 
+#' If trend is "random-walk-drift", the trend model is T_t = T_{t-1} + D_{t-1} + e_t, 
 #' e_t ~ N(0, sig_t^2) with
-#' M_t = d + phi*M_{t-1} + n_t, n_t ~ N(0, sig_m^2)
+#' D_t = d + phi_d*D_{t-1} + n_t, n_t ~ N(0, sig_d^2)
 #' If trend is "double-random-walk", the trend model is T_t = M_{t-1} + T_{t-1} + e_t, 
 #' e_t ~ N(0, sig_t^2) with
-#' M_t = M_{t-1} + n_t, n_t ~ N(0, sig_m^2)
+#' M_t = M_{t-1} + n_t, n_t ~ N(0, sig_d^2)
 #' If trend is "random-walk2", the trend model is T_t = 2T_{t-1} - T_{t-2} + e_t, 
 #' e_t ~ N(0, sig_t^2)
 #' @param multiplicative If data should be logged to create a multiplicative model.
@@ -53,7 +53,7 @@
 #' If det_cycle = TRUE then the error variance of the cycle equation (sig_c) is set to 0 and 
 #' is referred to as a deterministic cycle
 #' @param det_drift Set the drift error variance to 0 (deterministic drift)
-#' If det_drift = TRUE then the error variance of the drift equation (sig_m) is set to 0 and 
+#' If det_drift = TRUE then the error variance of the drift equation (sig_d) is set to 0 and 
 #' is refereed to as a deterministic drift
 #' @param maxit Maximum number of iterations for the optimization
 #' @param par Initial parameters, default is NULL
@@ -61,6 +61,7 @@
 #' @param verbose Logical whether to print messages or not
 #' @param unconstrained Logical whether to remove inequality constraints on the trend during estimation
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
+#' @param full_spectrum whether to check the full spectrum of frequencies for seasonality rather than a limited number based on the frequency of the data
 #' @import data.table
 #' @useDynLib autostsm, .registration=TRUE
 #' @return List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification
@@ -79,11 +80,11 @@
 #' }
 #' @export
 stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
-                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL,
+                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, full_spectrum = FALSE,
                          det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
                          sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE){
   #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = NULL
-  #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
+  #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = full_spectrum = FALSE
   #sig_level = 0.01
   #optim_methods = "BFGS"
   #maxit = 10000
@@ -114,17 +115,20 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       stop("decomp must be one of 'trend-noise', 'trend-cycle', 'trend-seasonal', 'trend-cycle-seasonal', or 'trend-seasonal-cycle'.")
     }
   }
-  if(!all(sapply(c(det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth, verbose), is.logical))){
+  if(!all(sapply(c(det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth, verbose, full_spectrum), is.logical))){
     stop("det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth must be logical.")
   }
   if(!is.null(seasons)){
-    if(!is.logical(seasons) | is.numeric(seasons)){
+    if(!(is.logical(seasons) | is.numeric(seasons))){
       stop("seasons must be NULL, a numeric vector, or logical")
     }
   }
   if(!is.null(cycle)){
-    if(!is.logical(cycle) | is.numeric(cycle)){
-      stop("cycle must be NULL, a numeric vector, or logical")
+    if(!(is.logical(cycle) | is.numeric(cycle))){
+      stop("cycle must be NULL, a numeric vector of length 1, or logical")
+    }
+    if(length(cycle) > 1){
+      stop("cycle can only a numeric vector of length 1")
     }
   }
   if(!is.null(freq)){
@@ -174,7 +178,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     if(verbose == TRUE){
       message("Detecting seasonality...")
     }
-    seasons = stsm_detect_seasonality(y, freq, sig_level = 0.0001, prior, full_spectrum = (standard_freq == FALSE))
+    seasons = stsm_detect_seasonality(y, freq, sig_level = 0.0001, prior, full_spectrum = (standard_freq == FALSE | full_spectrum == TRUE))
   }
   if(is.null(seasons) | all(seasons == F)){
     seasons = numeric(0)
@@ -253,12 +257,12 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   if(det_obs == TRUE){
     if("sig_c" %in% names(par)){
       par["sig_c"] = par["sig_c"] + par["sig_e"]
-    }else if("sig_m" %in% names(par) & "sig_t" %in% names(par)){
-      par["sig_m"] = par["sig_m"] + par["sig_e"]/2
+    }else if("sig_d" %in% names(par) & "sig_t" %in% names(par)){
+      par["sig_d"] = par["sig_d"] + par["sig_e"]/2
       par["sig_t"] = par["sig_t"] + par["sig_e"]/2
-    }else if("sig_m" %in% names(par) & !"sig_t" %in% names(par)){
-      par["sig_m"] = par["sig_m"] + par["sig_e"]
-    }else if("sig_t" %in% names(par) & !"sig_m" %in% names(par)){
+    }else if("sig_d" %in% names(par) & !"sig_t" %in% names(par)){
+      par["sig_d"] = par["sig_d"] + par["sig_e"]
+    }else if("sig_t" %in% names(par) & !"sig_d" %in% names(par)){
       par["sig_t"] = par["sig_t"] + par["sig_e"]
     }else if("sig_c" %in% names(par)){
       par["sig_c"] = par["sig_c"] + par["sig_e"]
@@ -267,18 +271,18 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     fixed = c(fixed, "sig_e")
   }
   if(det_trend == TRUE){
-    if("sig_m" %in% names(par)){
-      par["sig_m"] = par["sig_m"] + par["sig_t"]
+    if("sig_d" %in% names(par)){
+      par["sig_d"] = par["sig_d"] + par["sig_t"]
     }
     par["sig_t"] = 0
     fixed = c(fixed, "sig_t")
   }
   if(det_drift == TRUE){
     if("sig_t" %in% names(par) & det_trend == FALSE){
-      par["sig_t"] = par["sig_t"] + par["sig_m"]
+      par["sig_t"] = par["sig_t"] + par["sig_d"]
     }
-    par["sig_m"] = 0
-    fixed = c(fixed, "sig_m")
+    par["sig_d"] = 0
+    fixed = c(fixed, "sig_d")
   }
   if(det_cycle == TRUE){
     if("sig_e" %in% names(par) & det_obs == FALSE){
@@ -327,8 +331,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   objective = function(par, y, freq, decomp, trend, init){
     yt = matrix(y, nrow = 1)
     sp = stsm_ssm(par, yt, decomp, trend, init)
-    ans = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dt, sp$At, sp$Ft, sp$Ht, sp$Qt, sp$Rt,
-                        yt, X, sp$beta)
+    ans = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dm, sp$Am, sp$Fm, sp$Hm, sp$Qm, sp$Rm,
+                        yt, X, sp$beta, smooth = FALSE)
     return(ans$loglik)
   }
   

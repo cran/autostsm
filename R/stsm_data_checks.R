@@ -57,7 +57,7 @@ stsm_check_exo_fc = function(exo.fc, n.ahead){
       if(nrow(exo.fc) != n.ahead){
         stop("exo.fc must have the same number of rows as n.ahead")  
       }else if(!all(unlist(lapply(colnames(exo.fc), function(x){class(exo.fc[, c(x), with = FALSE][[1]])})) %in% 
-                   c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+                   c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric", "integer"))){
         stop("exo.fc must have a date and numeric column")
       }
     }

@@ -6,7 +6,6 @@ knitr::opts_chunk$set(
 )
 
 ## -----------------------------------------------------------------------------
-#  library(data.table)
 #  library(ggplot2)
 #  library(gridExtra)
 #  library(autostsm)
@@ -90,6 +89,8 @@ knitr::opts_chunk$set(
 #                  by = "date", all = TRUE)
 
 ## -----------------------------------------------------------------------------
+#  library(autostsm)
+#  
 #  ##### Unemployment rate examples #####
 #  #Not seasonally adjusted
 #  data("UNRATENSA", package = "autostsm") #From FRED

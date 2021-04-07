@@ -17,47 +17,44 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// gen_inv
+arma::mat gen_inv(arma::mat m);
+RcppExport SEXP _autostsm_gen_inv(SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(gen_inv(m));
+    return rcpp_result_gen;
+END_RCPP
+}
 // kalman_filter
-Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat Dt, const arma::mat At, const arma::mat Ft, const arma::mat Ht, const arma::mat Qt, const arma::mat Rt, const arma::mat yt, const arma::mat X, const arma::mat beta);
-RcppExport SEXP _autostsm_kalman_filter(SEXP B0SEXP, SEXP P0SEXP, SEXP DtSEXP, SEXP AtSEXP, SEXP FtSEXP, SEXP HtSEXP, SEXP QtSEXP, SEXP RtSEXP, SEXP ytSEXP, SEXP XSEXP, SEXP betaSEXP) {
+Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat Dm, const arma::mat Am, const arma::mat Fm, const arma::mat Hm, const arma::mat Qm, const arma::mat Rm, const arma::mat yt, const arma::mat X, const arma::mat beta, bool smooth);
+RcppExport SEXP _autostsm_kalman_filter(SEXP B0SEXP, SEXP P0SEXP, SEXP DmSEXP, SEXP AmSEXP, SEXP FmSEXP, SEXP HmSEXP, SEXP QmSEXP, SEXP RmSEXP, SEXP ytSEXP, SEXP XSEXP, SEXP betaSEXP, SEXP smoothSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat >::type B0(B0SEXP);
     Rcpp::traits::input_parameter< const arma::mat >::type P0(P0SEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Dt(DtSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type At(AtSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Ft(FtSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Ht(HtSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Qt(QtSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Rt(RtSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Dm(DmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Am(AmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Fm(FmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Hm(HmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Qm(QmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Rm(RmSEXP);
     Rcpp::traits::input_parameter< const arma::mat >::type yt(ytSEXP);
     Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
     Rcpp::traits::input_parameter< const arma::mat >::type beta(betaSEXP);
-    rcpp_result_gen = Rcpp::wrap(kalman_filter(B0, P0, Dt, At, Ft, Ht, Qt, Rt, yt, X, beta));
-    return rcpp_result_gen;
-END_RCPP
-}
-// kalman_smoother
-Rcpp::List kalman_smoother(const arma::mat B_tl, arma::mat B_tt, const arma::cube P_tl, arma::cube P_tt, const arma::mat Ft);
-RcppExport SEXP _autostsm_kalman_smoother(SEXP B_tlSEXP, SEXP B_ttSEXP, SEXP P_tlSEXP, SEXP P_ttSEXP, SEXP FtSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat >::type B_tl(B_tlSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type B_tt(B_ttSEXP);
-    Rcpp::traits::input_parameter< const arma::cube >::type P_tl(P_tlSEXP);
-    Rcpp::traits::input_parameter< arma::cube >::type P_tt(P_ttSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type Ft(FtSEXP);
-    rcpp_result_gen = Rcpp::wrap(kalman_smoother(B_tl, B_tt, P_tl, P_tt, Ft));
+    Rcpp::traits::input_parameter< bool >::type smooth(smoothSEXP);
+    rcpp_result_gen = Rcpp::wrap(kalman_filter(B0, P0, Dm, Am, Fm, Hm, Qm, Rm, yt, X, beta, smooth));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_autostsm_Rginv", (DL_FUNC) &_autostsm_Rginv, 1},
-    {"_autostsm_kalman_filter", (DL_FUNC) &_autostsm_kalman_filter, 11},
-    {"_autostsm_kalman_smoother", (DL_FUNC) &_autostsm_kalman_smoother, 5},
+    {"_autostsm_gen_inv", (DL_FUNC) &_autostsm_gen_inv, 1},
+    {"_autostsm_kalman_filter", (DL_FUNC) &_autostsm_kalman_filter, 12},
     {NULL, NULL, 0}
 };
 

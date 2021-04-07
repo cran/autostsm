@@ -31,8 +31,8 @@ where $Y_t$ is a univariate time series, $T_t$ is the trend component, $C_t$ is 
 
 For state space model is written as
 $$
-Y_t = A + H \beta + BX + e_t, e_t ~ N(0, R)\\
-\beta_t = D + F \beta_{t-1} + u_t, u_t ~ N(0, Q)
+Y_t = A + H \beta + BX + e_t, e_t \sim N(0, R)\\
+\beta_t = D + F \beta_{t-1} + u_t, u_t \sim N(0, Q)
 $$
 
 where the first equation is the observation equation and the second equation is the transition equation. $H$ is the observation matrix and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the unobserved components (trend, seasonal, and cycle), $F$ is the transition matrix, and $Q$ is the transition error-covariance matrix.
@@ -46,15 +46,15 @@ $$
 
 If trend is "random-walk-drift", the trend model is specified as the I(1) process
 $$
-T_t = M_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
-M_t = \delta + \phi_1 M_{t-1} + n_t, n_t \sim N(0, \sigma_m^2)
+T_t = D_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
+D_t = d + \phi_d D_{t-1} + n_t, n_t \sim N(0, \sigma_d^2)
 $$
-where $M_t$ is the drift.
+where $D_t$ is the drift.
 
 If trend is "double-random-walk", the trend model is specified as the I(2) process
 $$
-T_t = M_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
-M_t = M_{t-1} + n_t, n_t \sim N(0, \sigma_m^2)
+T_t = D_{t-1} + T_{t-1} + e_t, e_t \sim N(0, \sigma_t^2) \\
+D_t = D_{t-1} + n_t, n_t \sim N(0, \sigma_d^2)
 $$
 
 ## Cycle Model
@@ -66,7 +66,7 @@ $$
 c_t \\
 c_t^{*}
 \end{bmatrix} = 
-\rho \begin{bmatrix}
+\phi_c \begin{bmatrix}
 cos(\lambda) & sin(\lambda) \\
 -sin(\lambda) & cos(\lambda)
 \end{bmatrix}
@@ -79,7 +79,7 @@ u_t \\
 u_t^{*}
 \end{bmatrix}, u_t, u_t^{*} \sim N(0, \sigma_c^2)
 $$
-where $\lambda$ is the frequency of the cycle and $\rho \in{(0,1)}$ to make the cycle stationary for forecasting purposes, or the ARMA(2,1) process
+where $\lambda$ is the frequency of the cycle and $\phi_c \in{(0,1)}$ to make the cycle stationary for forecasting purposes, or the ARMA(2,1) process
 
 $$
 \begin{bmatrix}
@@ -88,7 +88,7 @@ c_{t-1} \\
 e_t
 \end{bmatrix} = 
 \begin{bmatrix}
-\psi_1 & \psi_2 & \theta_1 \\
+\phi_{c,1} & \phi_{c,2} & \theta_{c,1} \\
 1 & 0 & 0 \\
 0 & 0 & 0
 \end{bmatrix}
@@ -181,7 +181,7 @@ The second step is wavelet analysis for seasonal detection, which is performed b
 $$
 \tilde{y_t} = \sum_{i = 1}^j (a_j sin(j) + b_j cos(j))
 $$
-Selection is performed using forward stepwise regression for seasonal frequencies of minutely, hourly, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly where applicable for a more parsimonious model and to reduce the likelihood of spurious seasonalities from being detected. After each iteration, a $\chi^2$ test is performed for the sum of each pair of coefficients, $\chi_j^2 = a_j^2 + b_j^2$, which corresponds to the squared power of each frequency. Any frequency that is not statistically significant is discarded before the next iteration so that only statistically significant frequencies are kept at each iteration. After all iterations, the remaining frequencies are selected as those that describe the seasonal pattern in the data. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious seasonal frequencies from being included in the model. 
+Selection is performed using forward stepwise regression for seasonal frequencies of minutely, hourly, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly where applicable for a more parsimonious model and to reduce the likelihood of spurious seasonalities from being detected. Alternatively, the user can specify `full_spectrum = TRUE` to check every seasonal length that has at least 3 cycles observed in the data. After each iteration, a $\chi^2$ test is performed for the sum of each pair of coefficients, $\chi_j^2 = a_j^2 + b_j^2$, which corresponds to the squared power of each frequency. Any frequency that is not statistically significant is discarded before the next iteration so that only statistically significant frequencies are kept at each iteration. After all iterations, the remaining frequencies are selected as those that describe the seasonal pattern in the data. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious seasonal frequencies from being included in the model. 
 
 
 ### Cycle Detection 
@@ -212,7 +212,7 @@ If the data is determined to be
 
 ## The Kalman Filter
 
-To estimate the unobserved components ($T_t, C_t, S_t$, and $M_t$), the Kalman filter is utilized. The Kalman filter is a forward two-stage procedure that is the optimal linear filter based on the multivariate normal distribution. The "forwardness" of the filter means that it uses only data up to time $t$ to make an inference on the unobserved components at time $t$ and does peak into the future to make that inference.
+To estimate the unobserved components ($T_t, C_t, S_t$, and $D_t$), the Kalman filter is utilized. The Kalman filter is a forward two-stage procedure that is the optimal linear filter based on the multivariate normal distribution. The "forwardness" of the filter means that it uses only data up to time $t$ to make an inference on the unobserved components at time $t$ and does peak into the future to make that inference.
 
 ### Prediction Stage
 
@@ -303,11 +303,11 @@ This function will decompose the time series into trend and seasonality. The sea
 
 ### Trend and Drift Initial Values
 
-These parameters are set initial to match to the theoretical variance of the model depending on the trend type. If the trend is set to "random-walk" then $\sigma_t = sd(\Delta T_t^{*})$. If the trend is set to "double-random-walk" then $\sigma_t = \sigma_m = sd(\Delta T_t^{*})/sqrt(2)$. If the trend is set to "random-walk-drift", an AR(1) model is fit the drift prior, $\sigma_m$ is set to the standard deviation of the model errors, $\phi_1$ is the set to the estimated AR(1) parameter, and $\sigma_t$ is set to $\sqrt{var(\Delta T_t^*) - \frac{\sigma_m^2}{1 - \phi_1^2}}$ the theoretical variance if the trend is I(1).
+These parameters are set initial to match to the theoretical variance of the model depending on the trend type. If the trend is set to "random-walk" then $\sigma_t = sd(\Delta T_t^{*})$. If the trend is set to "double-random-walk" then $\sigma_t = \sigma_d = sd(\Delta T_t^{*})/sqrt(2)$. If the trend is set to "random-walk-drift", an AR(1) model is fit the drift prior, $\sigma_d$ is set to the standard deviation of the model errors, $\phi_d$ is the set to the estimated AR(1) parameter, and $\sigma_t$ is set to $\sqrt{var(\Delta T_t^*) - \frac{\sigma_d^2}{1 - \phi_d^2}}$ the theoretical variance if the trend is I(1).
 
 ### Cycle Initial Values
 
-If the cycle model is set to the ARMA specification or a cycle is not detected, an ARMA(2, 0, 1) process is fit to the cycle prior to set the parameters for the cycle component. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, $\lambda$ is set to be $\frac{2\pi}{c}$ where $c$ is the estimated cycle period. $\rho$ is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as $\rho$ is in a AR(1) process. Finally, $\sigma_c$ is set to the standard deviation of the model errors.
+If the cycle model is set to the ARMA specification or a cycle is not detected, an ARMA(2, 0, 1) process is fit to the cycle prior to set the parameters for the cycle component. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, $\lambda$ is set to be $\frac{2\pi}{c}$ where $c$ is the estimated cycle period. $\phi_c$ is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as $\phi_c$ is in a AR(1) process. Finally, $\sigma_c$ is set to the standard deviation of the model errors.
 
 ### Seasonality Initial Values
 
@@ -323,19 +323,21 @@ The initial values of the unobserved components must also be initialized. These 
 
 ### Box Constraints
 
-The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include startionarity constraints for the cycle, $0 < \rho < 1$ and drift, $-1 < \phi < 1$, as well as $\sigma_x > 0$ for all variance parameters. Trend smoothness constraints
+The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include startionarity constraints for the cycle, $0 < \phi_c < 1$ and drift, $-1 < \phi < 1$, as well as $\sigma_x > 0$ for all variance parameters. Trend smoothness constraints
 
 $$
-\sigma_t + \sigma_m < \sigma_e \\
-\sigma_t + \sigma_m < \sigma_c \\
-\sigma_t + \sigma_m < \sum_j \sigma_j
+\sigma_t + \sigma_d < \sigma_e \\
+\sigma_t + \sigma_d < \sigma_c \\
+\sigma_t + \sigma_d < \sum_j \sigma_j
 $$
 
 are also included to ensure that the trend accounts for the least variability among all the components. It can be relaxed by setting `unconstrained = TRUE` in `stsm_estimate`.
 
 ## Anomaly Detection
 
-Anomaly detection uses the estimated structural model and the recursive nature of the Kalman filter to detect observations that are outside a given threshold of the model's predicted values for time $t$ given estimates at time $t-1$. The threshold is determined by the forecast error variance of the estimated structural model. Anomalies that are detected can then be replaced with the modeled predicted values if the user wants to replace outliers. 
+Anomaly detection uses the estimated structural model and the recursive nature of the Kalman filter to detect observations that are outside a given threshold of the model's predicted values for time $t$ given the data and estimates of the unobserved components at time $t-1$. The threshold is determined by the forecast error variance of the estimated structural model. Anomalies that are detected can then be replaced with the modeled predicted values or threshold if the user wants to replace outliers. 
+
+It is important to note that anomalies are detected by comparison to the model, which is based on normally distributed innovations. Thus, the interpretation of an anomaly here is a value that has an "x" percent chance of occurring based on the data being generated from normal innovations, where the "x" percent is determined by the threshold. Normal distributions may not be appropriate for all time series, but this method of anomaly detection could be used to tell the user about the validity of the normality assumption: i.e. if more than 1% of the sample is detected as an anomaly with a 99% threshold, then normality may not be the best assumption for innovations for that particular series. 
 
 `stsm_detect_anomalies` will only plot if anomalies are detected and `plot = TRUE`.
 
@@ -358,7 +360,7 @@ If the data has an upward (or downward trend), the algorithm will look for break
 
 Structural breaks in the seasonality and cycle are detected by looking for changes in the mean absolute value of the seasonal series (an analog for the amplitude). To check from breaks in the amplitude, a simple test on the mean absolute value is performed as this is related to the amplitude via the relationship $Avg(|x_t|) = \frac{2}{\pi}Amp$. If the amplitude is not stable across the entire series, then a break should be detected.
 
-Seasonality is defined by a constant periodicity, but economic cycles are rarely constant in their periodicity. So, a second structural break test is used on the cycle to check for changes in the periodicity. To check for breaks in the periodicity, the cycle is modeled using the trigonometric structure described above ($C_t = \rho cos(\lambda_t) C_{t-1} + \rho sin(\lambda_t) C_{t-1}^{*} = a C_{t-1} + b C_{t-1}^{*}$) and looking for instabilities in the coefficients over the time sample. The periodicity is identified from the linear regression using the relationship $period = \frac{2\pi}{tan^{-1}(\frac{b}{a})}$. If the coefficients of this model are not stable across the entire series, then a break should be detected.
+Seasonality is defined by a constant periodicity, but economic cycles are rarely constant in their periodicity. So, a second structural break test is used on the cycle to check for changes in the periodicity. To check for breaks in the periodicity, the cycle is modeled using the trigonometric structure described above ($C_t = \phi_c cos(\lambda_t) C_{t-1} + \phi_c sin(\lambda_t) C_{t-1}^{*} = a C_{t-1} + b C_{t-1}^{*}$) and looking for instabilities in the coefficients over the time sample. The periodicity is identified from the linear regression using the relationship $period = \frac{2\pi}{tan^{-1}(\frac{b}{a})}$. If the coefficients of this model are not stable across the entire series, then a break should be detected.
 
 This procedure can be time consuming, even with high performance parallel computing, so if the user is only interested in structural breaks for a particular component, the user can specify the `components` arguments of `stsm_detect_breaks` to be any combination of "trend", "cycle", and "seasonal". `stsm_detect_breaks` will only plot the breaks that are detected if `plot = TRUE`.
 
@@ -369,7 +371,6 @@ Below is an example of how to use this package:
 ## Case 1: Sample Data Example
 
 ```{r}
-library(data.table)
 library(ggplot2)
 library(gridExtra)
 library(autostsm)
@@ -456,6 +457,8 @@ stsm_fc = merge(stsm_fc,
 ## Case 2: Real Data Examples
 
 ```{r}
+library(autostsm)
+
 ##### Unemployment rate examples #####
 #Not seasonally adjusted
 data("UNRATENSA", package = "autostsm") #From FRED
@@ -535,5 +538,3 @@ stsm_fc = merge(stsm_fc,
                 stsm_detect_breaks(stsm, y = SP500, plot = TRUE, show_progress = TRUE), 
                 by = "date", all = TRUE)
 ```
-
-

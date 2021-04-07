@@ -16,6 +16,7 @@ stsm_estimate(
   par = NULL,
   seasons = NULL,
   cycle = NULL,
+  full_spectrum = FALSE,
   det_obs = FALSE,
   det_trend = NULL,
   det_seas = FALSE,
@@ -43,12 +44,12 @@ stsm_estimate(
 "random-walk2" is a 2nd order random walk trend as in the Hodrick-Prescott filter.
 If trend is "random-walk", the trend model is T_t = T_{t-1} + e_t, 
 e_t ~ N(0, sig_t^2)
-If trend is "random-walk-drift", the trend model is T_t = T_{t-1} + M_{t-1} + e_t, 
+If trend is "random-walk-drift", the trend model is T_t = T_{t-1} + D_{t-1} + e_t, 
 e_t ~ N(0, sig_t^2) with
-M_t = d + phi*M_{t-1} + n_t, n_t ~ N(0, sig_m^2)
+D_t = d + phi_d*D_{t-1} + n_t, n_t ~ N(0, sig_d^2)
 If trend is "double-random-walk", the trend model is T_t = M_{t-1} + T_{t-1} + e_t, 
 e_t ~ N(0, sig_t^2) with
-M_t = M_{t-1} + n_t, n_t ~ N(0, sig_m^2)
+M_t = M_{t-1} + n_t, n_t ~ N(0, sig_d^2)
 If trend is "random-walk2", the trend model is T_t = 2T_{t-1} - T_{t-2} + e_t, 
 e_t ~ N(0, sig_t^2)}
 
@@ -68,6 +69,8 @@ Can set to FALSE if want no seasonality}
 \item{cycle, }{The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
 Can set to FALSE if want no cycle.}
 
+\item{full_spectrum}{whether to check the full spectrum of frequencies for seasonality rather than a limited number based on the frequency of the data}
+
 \item{det_obs}{Set the observation equation error variance to 0 (deterministic observation equation)
 If det_obs = TRUE then the error variance of the observation equation (sig_e) is set to 0}
 
@@ -80,7 +83,7 @@ If det_seas = TRUE then the error variance all seasonality frequency j equations
 are set to 0 and is referred to as deterministic seasonality}
 
 \item{det_drift}{Set the drift error variance to 0 (deterministic drift)
-If det_drift = TRUE then the error variance of the drift equation (sig_m) is set to 0 and 
+If det_drift = TRUE then the error variance of the drift equation (sig_d) is set to 0 and 
 is refereed to as a deterministic drift}
 
 \item{det_cycle}{Set the cycle error variance to 0 (deterministic cycle)
