@@ -164,7 +164,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   }
   
   #Setup parallel computing
-  cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(iter), parallel::detectCores() - 1)), cores))))
+  cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(iter), parallel::detectCores())), cores))))
   doSNOW::registerDoSNOW(cl)
   `%fun%` = foreach::`%dopar%`
   
@@ -180,7 +180,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     progress = NULL
   }
   out = foreach::foreach(j = iter, .combine = combine, 
-                         .packages = c("data.table", "forecast", "strucchange", "stats", "tsutils", "foreach", "doSNOW", "parallel"),
+                         .packages = c("data.table", "forecast", "strucchange", "stats", "tsutils"),
                          .options.snow = list(progress = progress)) %fun% {
     bp_dt = data.table()
     series_fit = data.table()

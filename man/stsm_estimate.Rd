@@ -16,7 +16,7 @@ stsm_estimate(
   par = NULL,
   seasons = NULL,
   cycle = NULL,
-  full_spectrum = FALSE,
+  cores = NULL,
   det_obs = FALSE,
   det_trend = NULL,
   det_seas = FALSE,
@@ -69,7 +69,7 @@ Can set to FALSE if want no seasonality}
 \item{cycle, }{The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
 Can set to FALSE if want no cycle.}
 
-\item{full_spectrum}{whether to check the full spectrum of frequencies for seasonality rather than a limited number based on the frequency of the data}
+\item{cores}{Number of cores to use for seasonality and cycle detection}
 
 \item{det_obs}{Set the observation equation error variance to 0 (deterministic observation equation)
 If det_obs = TRUE then the error variance of the observation equation (sig_e) is set to 0}

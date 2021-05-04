@@ -176,23 +176,31 @@ The second test is a test for constant seasonal-cycle amplitude using the Cox-St
 
 ### Seasonality Detection
 
-The second step is wavelet analysis for seasonal detection, which is performed by regressing a series of sin-cos waves (Fourier series) on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion tests suggests that the detrended data does not have a constant amplitude. The regression is performed sequentially, starting with a wave of periodicity equal to that of the data's frequency and working back towards a wave with periodicity 2, using the equation
+The second step is wavelet analysis for seasonal detection, which is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each seasonal harmonic using the equation
 
 $$
-\tilde{y_t} = \sum_{i = 1}^j (a_j sin(j) + b_j cos(j))
+\tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
 $$
-Selection is performed using forward stepwise regression for seasonal frequencies of minutely, hourly, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly where applicable for a more parsimonious model and to reduce the likelihood of spurious seasonalities from being detected. Alternatively, the user can specify `full_spectrum = TRUE` to check every seasonal length that has at least 3 cycles observed in the data. After each iteration, a $\chi^2$ test is performed for the sum of each pair of coefficients, $\chi_j^2 = a_j^2 + b_j^2$, which corresponds to the squared power of each frequency. Any frequency that is not statistically significant is discarded before the next iteration so that only statistically significant frequencies are kept at each iteration. After all iterations, the remaining frequencies are selected as those that describe the seasonal pattern in the data. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious seasonal frequencies from being included in the model. 
 
+for harmonics $j$ that correspond to the spectrum of minutely, hourly, workday hours, half daily, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly seasonal frequencies where applicable. However, since this limits the number of frequencies tested, a linear space of 100 items is created between each harmonic so that the space captures 1% of the distance between the original two harmonics. If a nonstandard frequency is detected, the harmonics are set to $j = \lfloor \frac{f}{2} \rfloor$, but only taking 1000 equally spaced harmonics for harmonics that have at least 3 cycles in the data. This strategy limits the number of harmonics tested for speed, while also trying to capture some a priori important seasonalities based on the frequency of the data. 
+
+At each iteration, an F-test is performed to measure the significance of the harmonic in explaining the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. The frequencies (defined as $\frac{f}{j}$) are then matched to the spectrum of seasonalities that correspond to the a priori important seasonal spectrum if the frequency of the harmonic is within one delta of the frequency of this predefined spectrum. This delta is equal to the unique difference between the frequencies of the harmonics.
+
+Lastly, backward stepwise regression procedure using an F-test for the significance of each seasonality (i.e. joint significance of $a_j$ and $b_j$ is used to build the final seasonality specification starting with only the harmonics that were statistically significant from the first step. At each stage of the of the stepwise procedure, an F-test for the statistical significance of each seasonality is performed and any harmonics that are not statistically significant are removed. The process is performed iteratively until all remaining harmonics are statistically significant. The F-tests for this procedure are calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.
 
 ### Cycle Detection 
 
-Next, wavelet analysis for cycle detection is performed by regressing a series of sin-cos waves (Fourier series) on the detrended data. This new series may also be rescaled by the trend if the Cox-Stuart dispersion tests suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each wave using the equation
+Next, wavelet analysis for cycle detection is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each harmonic using the equation
 
 $$
-\tilde{y_t} = a_j sin(j) + b_j cos(j)
+\tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
 $$
 
-for harmonics $j$ from 0.01 to 0.99 for every 0.01. After each iteration, a $\chi^2$ test is performed for $\chi^2_j = a_j^2 + b_j^2$, which corresponds to the squared power of each harmonic. After all harmonics have been tested, the algorithm looks for local maxima from the power spectrum. The final selection for the cycle frequency corresponds to the harmonic that is a local maxima with the largest statistically significant power. The statistical significance level used is fixed at 0.0001 (or 0.01%). This level is set to prevent spurious cycles from being included in the model. 
+for harmonics $j = 0.01$ to $j = 0.99$ for every 0.01 and truncated for harmonics that correspond to periods $\in [ 2.5f, T]$ and harmonics < $1/2$ where $T$ is the length of the data.
+
+At each iteration, an F-test is performed to measure the significance of the harmonic to explain the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. Once all harmonics have been tested, the algorithm looks for a global maximum from the power spectrum measured with the F-statistic that is statistically significant. 
+
+Lastly, a final regression is performed with only the harmonic that was selected from the first step. From this regression, the harmonic is kept only if the cycle is statistically significant (i.e. $a_j$ and $b_j$ are jointly significant) as measured by the F-test for the final harmonic regression. The F-test for this step is calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.
 
 The cycle is set to the trigonometric form if a cycle is detected using wavelet analysis. Otherwise, it is set to the ARMA specification. 
 
@@ -438,7 +446,7 @@ grid.arrange(g1, g2, g3, layout_matrix = rbind(c(1, 1), c(2, 3)))
 
 
 #Estimate the model
-stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE])
+stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE], verbose = TRUE)
 
 #Forecast and plot the results
 stsm_fc = stsm_forecast(stsm, y = ts[, c("date", "y"), with = FALSE], n.ahead = floor(stsm$freq)*3, plot = TRUE)
@@ -466,7 +474,7 @@ UNRATENSA = data.table(UNRATENSA, keep.rownames = TRUE)
 colnames(UNRATENSA) = c("date", "y")
 UNRATENSA[, "date" := as.Date(date)]
 UNRATENSA[, "y" := as.numeric(y)]
-stsm = stsm_estimate(UNRATENSA)
+stsm = stsm_estimate(UNRATENSA, verbose = TRUE)
 stsm_fc = stsm_forecast(stsm, y = UNRATENSA, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_anomalies(stsm, y = UNRATENSA, plot = TRUE), 
@@ -481,7 +489,7 @@ UNRATE = data.table(UNRATE, keep.rownames = TRUE)
 colnames(UNRATE) = c("date", "y")
 UNRATE[, "date" := as.Date(date)]
 UNRATE[, "y" := as.numeric(y)]
-stsm = stsm_estimate(UNRATE)
+stsm = stsm_estimate(UNRATE, verbose = TRUE)
 stsm_fc = stsm_forecast(stsm, y = UNRATE, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_anomalies(stsm, y = UNRATE, plot = TRUE), 
@@ -498,7 +506,7 @@ colnames(NA000334Q) = c("date", "y")
 NA000334Q[, "date" := as.Date(date)]
 NA000334Q[, "y" := as.numeric(y)]
 NA000334Q = NA000334Q[date >= "1990-01-01", ]
-stsm = stsm_estimate(NA000334Q)
+stsm = stsm_estimate(NA000334Q, verbose = TRUE)
 stsm_fc = stsm_forecast(stsm, y = NA000334Q, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_anomalies(stsm, y = NA000334Q, plot = TRUE), 
@@ -514,7 +522,7 @@ colnames(GDP) = c("date", "y")
 GDP[, "date" := as.Date(date)]
 GDP[, "y" := as.numeric(y)]
 GDP = GDP[date >= "1990-01-01", ]
-stsm = stsm_estimate(GDP)
+stsm = stsm_estimate(GDP, verbose = TRUE)
 stsm_fc = stsm_forecast(stsm, y = GDP, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_anomalies(stsm, y = GDP, plot = TRUE), 
@@ -529,7 +537,7 @@ SP500 = data.table(SP500, keep.rownames = TRUE)
 colnames(SP500) = c("date", "y")
 SP500[, "date" := as.Date(date)]
 SP500[, "y" := as.numeric(y)]
-stsm = stsm_estimate(SP500)
+stsm = stsm_estimate(SP500, verbose = TRUE)
 stsm_fc = stsm_forecast(stsm, y = SP500, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_anomalies(stsm, y = SP500, plot = TRUE), 

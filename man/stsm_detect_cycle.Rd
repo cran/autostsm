@@ -4,7 +4,15 @@
 \alias{stsm_detect_cycle}
 \title{Detect cycle from the data}
 \usage{
-stsm_detect_cycle(y, freq, sig_level = 1e-04, prior = NULL)
+stsm_detect_cycle(
+  y,
+  freq,
+  sig_level = 0.01,
+  prior = NULL,
+  cl = NULL,
+  cores = NULL,
+  show_progress = FALSE
+)
 }
 \arguments{
 \item{y}{Univariate time series of data values.}
@@ -14,6 +22,12 @@ stsm_detect_cycle(y, freq, sig_level = 1e-04, prior = NULL)
 \item{sig_level}{Significance level to determine statistically significant seasonal frequencies}
 
 \item{prior}{A data table created by stsm_prior}
+
+\item{cl}{a parallel cluster object}
+
+\item{cores}{Number of cores to use}
+
+\item{show_progress}{Whether to show progress bar}
 }
 \value{
 Numeric value of cycle periodicity

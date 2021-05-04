@@ -61,7 +61,7 @@
 #' @param verbose Logical whether to print messages or not
 #' @param unconstrained Logical whether to remove inequality constraints on the trend during estimation
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
-#' @param full_spectrum whether to check the full spectrum of frequencies for seasonality rather than a limited number based on the frequency of the data
+#' @param cores Number of cores to use for seasonality and cycle detection
 #' @import data.table
 #' @useDynLib autostsm, .registration=TRUE
 #' @return List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification
@@ -80,11 +80,11 @@
 #' }
 #' @export
 stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
-                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, full_spectrum = FALSE,
+                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, cores = NULL,
                          det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
                          sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE){
-  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = NULL
-  #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = full_spectrum = FALSE
+  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = NULL
+  #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
   #sig_level = 0.01
   #optim_methods = "BFGS"
   #maxit = 10000
@@ -115,7 +115,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       stop("decomp must be one of 'trend-noise', 'trend-cycle', 'trend-seasonal', 'trend-cycle-seasonal', or 'trend-seasonal-cycle'.")
     }
   }
-  if(!all(sapply(c(det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth, verbose, full_spectrum), is.logical))){
+  if(!all(sapply(c(det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth, verbose), is.logical))){
     stop("det_obs, det_seas, det_drift, det_cycle, unconstrained, saturating_growth must be logical.")
   }
   if(!is.null(seasons)){
@@ -136,6 +136,12 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       stop("freq must be numeric")
     }
   }
+  if(!is.null(cores)){
+    if(cores > parallel::detectCores()){
+      cores = parallel::detectCores()
+      warning("'cores' was set to be more than the available number of cores on the machine. Setting 'cores' to parallel::detectCores().")
+    }
+  }
   stsm_check_y(y)
   stsm_check_exo(exo, y)
   
@@ -154,6 +160,10 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   dates = dates[range[1]:range[length(range)]]
   exo = stsm_format_exo(exo, dates, range)
   
+  #Set up parallel computing
+  cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), parallel::detectCores()), cores)))
+  doSNOW::registerDoSNOW(cl)
+  
   #Set the decomposition
   if(verbose == TRUE & (is.null(decomp) | is.null(seasons) | is.null(trend))){
     message("Detecting the appropriate decomposition...")
@@ -162,7 +172,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Detect multiplicative model
   if(is.null(multiplicative)){
     if(verbose == TRUE){
-      message("Detecting if the model should be multiplicative...")
+      message("Checking for a multiplicative model...")
     }
     multiplicative = stsm_detect_multiplicative(y, freq, sig_level)
   }
@@ -176,22 +186,22 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Detect seasonality
   if(is.null(seasons) & ifelse(!is.null(decomp), grepl("seasonal", decomp), TRUE)){
     if(verbose == TRUE){
-      message("Detecting seasonality...")
+      message("Checking for seasonality...")
     }
-    seasons = stsm_detect_seasonality(y, freq, sig_level = 0.0001, prior, full_spectrum = (standard_freq == FALSE | full_spectrum == TRUE))
+    seasons = stsm_detect_seasonality(y, freq, sig_level, prior, cl = cl, cores = cores, show_progress = verbose)
   }
-  if(is.null(seasons) | all(seasons == F)){
+  if(is.null(seasons) | all(seasons == FALSE)){
     seasons = numeric(0)
   }
 
-  #Detect cyclicality
+  #Detect cycle
   if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE) & length(y) >= 3*freq){
     if(verbose == TRUE){
-      message("Detecting cyclicallity...")
+      message("Checking for a cycle...")
     }
-    cycle = stsm_detect_cycle(y, freq, sig_level = 0.0001, prior)
+    cycle = stsm_detect_cycle(y, freq, sig_level, prior, cl = cl, cores = cores, show_progress = verbose)
   }
-  if(is.null(cycle) | all(cycle == F)){
+  if(is.null(cycle) | all(cycle == FALSE)){
     cycle = numeric(0)
   }
   
@@ -203,7 +213,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Detect trend type
   if(is.null(trend)){
     if(verbose == TRUE){
-      message("Detecting the trend type...")
+      message("Selecting the trend type...")
     }
     trend = stsm_detect_trend(y, freq, sig_level = sig_level, prior = prior, seasons = seasons, cycle = cycle)
     if(is.null(det_trend)){
@@ -357,6 +367,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     stop("Estimation failed.")
   }
   
+  #Stop the cluster
+  parallel::stopCluster(cl)
+  
   #Retrieve the model output
   out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"] = 
     abs(out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"])
@@ -368,7 +381,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                decomp = decomp, multiplicative = multiplicative, 
                                convergence = (out$code == 0), 
                                loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
-                               AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(length(y) - k - 1),
+                               AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),
                                coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
   ))
   return(fit)

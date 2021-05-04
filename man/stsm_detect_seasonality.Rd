@@ -7,9 +7,11 @@
 stsm_detect_seasonality(
   y,
   freq,
-  sig_level = 1e-04,
+  sig_level = 0.01,
   prior = NULL,
-  full_spectrum = FALSE
+  cl = NULL,
+  cores = NULL,
+  show_progress = FALSE
 )
 }
 \arguments{
@@ -21,7 +23,11 @@ stsm_detect_seasonality(
 
 \item{prior}{A data table created from stsm_prior}
 
-\item{full_spectrum}{check the full spectrum of seasonal frequencies for seasonality}
+\item{cl}{a parallel cluster object}
+
+\item{cores}{Number of cores to use}
+
+\item{show_progress}{Whether to show progress bar}
 }
 \value{
 Numeric vector of seasonal periodicities

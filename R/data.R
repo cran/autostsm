@@ -33,13 +33,14 @@
 #' @usage data(GDP)
 "GDP"
 
-#' Stock & Watson US Dynamic Common Factor (1991) Data
-#' 
-#' @format data.table with columns date, ip (industrial production), 
-#' gmyxpg (personal income less transfer payments), 
-#' mtq (total manufacturing and trade sales), and 
-#' lpnag (employeess on nonagricultural payrolls)
-#' taken from 
-#' @source Kim and Nelson (1999) "State-Space Modesl with Regime Switching" (http://econ.korea.ac.kr/~cjkim/)
-#' @usage data(sw_dcf)
-"sw_dcf"
+#' #' Stock & Watson US Dynamic Common Factor (1991) Data
+#' #' 
+#' #' @format data.table with columns date, ip (industrial production), 
+#' #' gmyxpg (personal income less transfer payments), 
+#' #' mtq (total manufacturing and trade sales), and 
+#' #' lpnag (employeess on nonagricultural payrolls)
+#' #' taken from 
+#' #' @source Kim and Nelson (1999) "State-Space Models with Regime Switching" (http://econ.korea.ac.kr/~cjkim/)
+#' #' @usage data(sw_dcf)
+#' "sw_dcf"
+

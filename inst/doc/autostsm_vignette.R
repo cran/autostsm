@@ -73,7 +73,7 @@ knitr::opts_chunk$set(
 #  
 #  
 #  #Estimate the model
-#  stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE])
+#  stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE], verbose = TRUE)
 #  
 #  #Forecast and plot the results
 #  stsm_fc = stsm_forecast(stsm, y = ts[, c("date", "y"), with = FALSE], n.ahead = floor(stsm$freq)*3, plot = TRUE)
@@ -98,7 +98,7 @@ knitr::opts_chunk$set(
 #  colnames(UNRATENSA) = c("date", "y")
 #  UNRATENSA[, "date" := as.Date(date)]
 #  UNRATENSA[, "y" := as.numeric(y)]
-#  stsm = stsm_estimate(UNRATENSA)
+#  stsm = stsm_estimate(UNRATENSA, verbose = TRUE)
 #  stsm_fc = stsm_forecast(stsm, y = UNRATENSA, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = UNRATENSA, plot = TRUE),
@@ -113,7 +113,7 @@ knitr::opts_chunk$set(
 #  colnames(UNRATE) = c("date", "y")
 #  UNRATE[, "date" := as.Date(date)]
 #  UNRATE[, "y" := as.numeric(y)]
-#  stsm = stsm_estimate(UNRATE)
+#  stsm = stsm_estimate(UNRATE, verbose = TRUE)
 #  stsm_fc = stsm_forecast(stsm, y = UNRATE, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = UNRATE, plot = TRUE),
@@ -130,7 +130,7 @@ knitr::opts_chunk$set(
 #  NA000334Q[, "date" := as.Date(date)]
 #  NA000334Q[, "y" := as.numeric(y)]
 #  NA000334Q = NA000334Q[date >= "1990-01-01", ]
-#  stsm = stsm_estimate(NA000334Q)
+#  stsm = stsm_estimate(NA000334Q, verbose = TRUE)
 #  stsm_fc = stsm_forecast(stsm, y = NA000334Q, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = NA000334Q, plot = TRUE),
@@ -146,7 +146,7 @@ knitr::opts_chunk$set(
 #  GDP[, "date" := as.Date(date)]
 #  GDP[, "y" := as.numeric(y)]
 #  GDP = GDP[date >= "1990-01-01", ]
-#  stsm = stsm_estimate(GDP)
+#  stsm = stsm_estimate(GDP, verbose = TRUE)
 #  stsm_fc = stsm_forecast(stsm, y = GDP, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = GDP, plot = TRUE),
@@ -161,7 +161,7 @@ knitr::opts_chunk$set(
 #  colnames(SP500) = c("date", "y")
 #  SP500[, "date" := as.Date(date)]
 #  SP500[, "y" := as.numeric(y)]
-#  stsm = stsm_estimate(SP500)
+#  stsm = stsm_estimate(SP500, verbose = TRUE)
 #  stsm_fc = stsm_forecast(stsm, y = SP500, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #  stsm_fc = merge(stsm_fc,
 #                  stsm_detect_anomalies(stsm, y = SP500, plot = TRUE),
