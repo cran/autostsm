@@ -1,3 +1,14 @@
+#' Build a block diagonal matrix from two matrices
+#' 
+#' @param A The top left matrix
+#' @param B The bottom right matrix
+#' @return A block diagonal matrix
+stsm_bdiag = function(A, B){
+  A = cbind(A, matrix(0, nrow = nrow(A), ncol = ncol(B), dimnames = list(NULL, colnames(B))))
+  A = rbind(A, cbind(matrix(0, nrow = nrow(B), ncol = ncol(A) - ncol(B)), B))
+  return(A)
+}
+
 #' State space model
 #' 
 #' Creates a state space model in list form
@@ -97,14 +108,16 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   #Define the cycle component
   if(grepl("cycle", decomp)){
     Cm = par["phi_c"]*rbind(c(cos(par["lambda"]), sin(par["lambda"])),
-                          c(-sin(par["lambda"]), cos(par["lambda"])))
+                            c(-sin(par["lambda"]), cos(par["lambda"])))
     colnames(Cm) = c("Ct_1", "Cts_1")
     rownames(Cm) = c("Ct_0", "Cts_0")
-    Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
-                dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
+    Fm = stsm_bdiag(Fm, Cm)
     Hm = cbind(Hm, matrix(c(1, 0), nrow = 1))
     colnames(Hm) = rownames(Fm)
-    Qm = as.matrix(Matrix::bdiag(Qm, diag(2)*par["sig_c"]^2))
+    
+    Qm2 = diag(2)
+    diag(Qm2) = par["sig_c"]^2
+    Qm = stsm_bdiag(Qm, Qm2)
     colnames(Qm) = rownames(Qm) = rownames(Fm)
   }else if(sum(grepl("phi_c\\.\\d+|theta_c\\.\\d+", names(par))) > 0){
     #Define the ARMA part of the cycle/noise component
@@ -123,45 +136,34 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     }
     colnames(Cm) = colnames_c
     rownames(Cm) = rownames_c
-    
     Cm[rownames(Cm) %in% colnames(Cm), colnames(Cm) %in% rownames(Cm)] = diag(sum(rownames(Cm) %in% colnames(Cm)))
-    Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
-                dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
+    
+    Fm = stsm_bdiag(Fm, Cm)
     Hm = tryCatch(cbind(Hm, matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1)), 
                   error = function(err){matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1)})
     colnames(Hm) = rownames(Fm)
-    Qm = as.matrix(Matrix::bdiag(Qm, diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0"))*par["sig_c"]^2)))
-    colnames(Qm) = rownames(Qm) = rownames(Fm)
     
-    # Cm = rbind(par[c("phi_c.1", "phi_c.2", "theta_c.1")])
-    # Cm = matrix(rbind(Cm,
-    #            cbind(diag(2)*c(1, 0), matrix(0, nrow = 2, ncol = 1))),
-    #            ncol = ncol(Cm), dimnames = list(NULL, colnames(Cm)))
-    # rownames(Cm) = c("Ct_0", "Ct_1", "et_0")
-    # colnames(Cm) = c("Ct_1", "Ct_2", "et_1")
-    # Fm = matrix(Matrix::bdiag(Fm, Cm), ncol = ncol(Fm) + ncol(Cm),
-    #             dimnames = list(c(rownames(Fm), rownames(Cm)), c(colnames(Fm), colnames(Cm))))
-    # Hm = cbind(Hm, matrix(as.numeric(rownames(Cm) == "Ct_0"), nrow = 1))
-    # colnames(Hm) = rownames(Fm)
-    # Qm = as.matrix(Matrix::bdiag(Qm, diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0"))*par["sig_c"]^2)))
-    # colnames(Qm) = rownames(Qm) = rownames(Fm)
+    Qm2 = diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0")))
+    diag(Qm2) = par["sig_c"]^2
+    Qm = stsm_bdiag(Qm, Qm2)
+    colnames(Qm) = rownames(Qm) = rownames(Fm)
   }
   
   #Define the seasonal component
   if(grepl("seasonal", decomp)) {
     jiter = as.numeric(unique(gsub("[[:alpha:]]|_", "", names(par)[grepl("sig_s", names(par))])))
     for(j in jiter) {
-      colnames = colnames(Fm)
-      rownames = rownames(Fm)
       Sm = rbind(c(cos(2*pi*1/j), sin(2*pi*1/j)),
                  c(-sin(2*pi*1/j), cos(2*pi*1/j)))
-      Fm = as.matrix(Matrix::bdiag(Fm, Sm))
-      colnames(Fm) = c(colnames, paste0("St", j, "_1"), paste0("Sts", j, "_1"))
-      rownames(Fm) = c(rownames, paste0("St", j, "_0"), paste0("Sts", j, "_0"))
+      colnames(Sm) = paste0(c("St", "Sts"), j, "_1")
+      rownames(Sm) = paste0(c("St", "Sts"), j, "_0")
+      Fm = stsm_bdiag(Fm, Sm)
     }
     Hm = cbind(Hm, matrix(rep(c(1, 0), length(jiter)), nrow = 1))
     colnames(Hm) = rownames(Fm)
-    Qm = as.matrix(Matrix::bdiag(Qm, diag(unlist(lapply(jiter, function(j){rep(par[paste0("sig_s", j)]^2, 2)})))))
+    
+    Qm2 = diag(unlist(lapply(jiter, function(j){rep(par[paste0("sig_s", j)]^2, 2)})))
+    Qm = stsm_bdiag(Qm, Qm2)
     colnames(Qm) = rownames(Qm) = rownames(Fm)
   }
   
@@ -179,13 +181,12 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   
   #Initial guess for unobserved vector
   if(any(rownames(Fm) %in% names(par))){
-    B0 = par[rownames(Fm)]
+    B0 = matrix(par[rownames(Fm)], ncol = 1, dimnames = list(rownames(Fm), NULL))
   }else if(!is.null(init)) {
     B0 = init[["B0"]]
   }else{
-    B0 = rep(0, nrow(Fm))
-    names(B0) = rownames(Fm)
-    B0[grepl("Tt", names(B0))] = yt[1, 1]
+    B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
+    B0[grepl("Tt", rownames(B0)), ] = yt[1, 1]
   }
   
   #Initial guess for variance of the unobserved vector
@@ -198,5 +199,9 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     P0 = diag(ifelse(ncol(yt) > 2, stats::var(c(yt), na.rm = TRUE), 100), nrow = nrow(Fm), ncol = nrow(Fm))
     rownames(P0) = colnames(P0) = rownames(Fm)
   }
-  return(list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta))
+  
+  ret = list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta)
+  return(ret)
 }
+
+

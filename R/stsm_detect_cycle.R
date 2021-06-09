@@ -46,14 +46,28 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
   harmonics = harmonics[freq/harmonics >= 2.5*freq & harmonics < 1/2]
   harmonics = harmonics[freq/harmonics <= nrow(prior)]
   if(length(harmonics) > 0){
-    if(is.null(cl)){
-      cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(harmonics), parallel::detectCores())), cores))))
-      doSNOW::registerDoSNOW(cl)
-      stop_cluster = TRUE
+    if(is.null(cl) | ifelse(!is.null(cores), cores > 1, FALSE)){
+      cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(harmonics), parallel::detectCores())), cores)))),
+                    error = function(err){
+                      message("Parallel setup failed. Using single core.")
+                      return(NULL)
+                    })
+      if(!is.null(cl)){
+        doSNOW::registerDoSNOW(cl)
+        `%fun%` = foreach::`%dopar%`
+        stop_cluster = TRUE
+      }else{
+        stop_cluster = FALSE
+        `%fun%` = foreach::`%do%`
+      }
     }else{
       stop_cluster = FALSE
+      if(length(cl) > 1){
+        `%fun%` = foreach::`%dopar%`
+      }else{
+        `%fun%` = foreach::`%do%`
+      }
     }
-    `%fun%` = foreach::`%dopar%`
     
     if(show_progress == TRUE){
       pb = progress::progress_bar$new(
@@ -73,7 +87,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
                             .options.snow = list(progress = progress)) %fun% {
       #Build the ith harmonic
       prior = copy(prior)                       
-      prior[, colnames(prior)[grepl("sin|cos", colnames(prior))] := NULL]
+      suppressWarnings(prior[, colnames(prior)[grepl("sin|cos", colnames(prior))] := NULL])
       prior[, paste0("sin", i) := sin(2*pi*i/freq*t)]
       prior[, paste0("cos", i) := cos(2*pi*i/freq*t)]
       
@@ -82,6 +96,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
       pval = stats::pf(summary(lm)$fstatistic["value"], lower.tail = FALSE,
                        df1 = summary(lm)$fstatistic["numdf"], 
                        df2 = summary(lm)$fstatistic["dendf"])
+      tryCatch(pb$tick())
       return(data.table(frequency = i/freq, period = freq/i, fstat = summary(lm)$fstatistic["value"], pval = pval))
     }
     

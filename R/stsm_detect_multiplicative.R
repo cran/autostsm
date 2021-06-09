@@ -21,7 +21,7 @@
 #' @export
 stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
   #Bind data.table variables to the global environment
-  seasonal_adj = trend = NULL
+  seasonal_adj = trend = seasonal = NULL
   multiplicative = FALSE
   
   if(all(stats::na.omit(y) > 0)){
@@ -43,7 +43,7 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
     }
     
     #PE test for non-nested models and functional form choice: linear vs log model
-    prior[, "t" := 1:.N]
+    prior[, "t" := 1:.N][, "seasonal_adj" := y - seasonal]
     if(any(prior$seasonal_adj < 0)){
       prior[, "seasonal_adj" := seasonal_adj + abs(min(seasonal_adj, na.rm = TRUE)) + 1]
     }

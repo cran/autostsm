@@ -71,7 +71,6 @@ knitr::opts_chunk$set(
 #    theme(legend.position = "bottom")
 #  grid.arrange(g1, g2, g3, layout_matrix = rbind(c(1, 1), c(2, 3)))
 #  
-#  
 #  #Estimate the model
 #  stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE], verbose = TRUE)
 #  

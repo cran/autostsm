@@ -9,7 +9,7 @@ gen_inv <- function(m) {
     .Call(`_autostsm_gen_inv`, m)
 }
 
-kalman_filter <- function(B0, P0, Dm, Am, Fm, Hm, Qm, Rm, yt, X, beta, smooth = FALSE) {
-    .Call(`_autostsm_kalman_filter`, B0, P0, Dm, Am, Fm, Hm, Qm, Rm, yt, X, beta, smooth)
+kalman_filter <- function(sp, yt, X, smooth = FALSE) {
+    .Call(`_autostsm_kalman_filter`, sp, yt, X, smooth)
 }
 

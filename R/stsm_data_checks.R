@@ -75,7 +75,6 @@ stsm_check_exo_fc = function(exo.fc, n.ahead){
 stsm_format_exo = function(exo, dates, range){
   if(!is.null(exo)){
     exo = as.data.table(exo)
-    exo = exo[range[1]:range[length(range)], ]
     exo = merge.data.table(exo, data.table(date = dates), all = TRUE)
     exo = exo[, names(which(unlist(exo[, lapply(.SD, is.numeric)]))), with = FALSE]
   }

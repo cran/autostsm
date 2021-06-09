@@ -160,7 +160,7 @@ The numeric frequency reflects the number of periods in one year. Once the frequ
 
 ### Seasonal and Cycle Adjustment
 
-Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The `loess` function in the `stats` package requires that there are no missing values in the data, so any missing values are computed with the `na_kalman` function from the `imputeTS` package. If you know the missing data pattern in your data (i.e missing data should be 0), it's best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the `smooth.spline` function of the `stats` package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by regression the seasonal-cycle component on a Fourier series composed of the seasonal and cycle periods. 
+Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The `loess` function in the `stats` package requires that there are no missing values in the data, so any missing values are computed with the `na_kalman` function from the `imputeTS` package. If you know the missing data pattern in your data (i.e missing data should be 0), it's best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the `smooth.spline` function of the `stats` package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by first decomposing the seasonal-cycle using the `stl` function from the `stats` package then regressing the seasonal component on a Fourier series composed of the seasonal periods. 
 
 ### Multiplicative vs Additive Detection
 
@@ -206,9 +206,9 @@ The cycle is set to the trigonometric form if a cycle is detected using wavelet 
 
 ### Trend Detection
 
-The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the `tseries` package's `adf.test`, `pp.test`, and `kpss.test` functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the `forecast`'s package `tsoutliers` function before the test is performed.
+The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the `forecast` package's `ndiffs` functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the `forecast`'s package `tsoutliers` function before the test is performed.
 
-The number of differences selected for the trend specification is the most agreed upon number of differences from the unit root tests. Next, the Cox-Stuart trend test from the `tsutils` package is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
+The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test from the `tsutils` package is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
 
 If the data is determined to be 
 
@@ -443,7 +443,6 @@ g3 = ggplot(melt(ts, id.vars = "date", measure.vars = colnames(ts)[grepl("season
   theme_minimal() + guides(color = guide_legend(title = NULL)) +
   theme(legend.position = "bottom")
 grid.arrange(g1, g2, g3, layout_matrix = rbind(c(1, 1), c(2, 3)))
-
 
 #Estimate the model
 stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE], verbose = TRUE)

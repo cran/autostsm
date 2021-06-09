@@ -48,25 +48,27 @@ stsm_prior = function(y, freq, decomp = "", seasons = NULL, cycle = NULL){
   
   #Estimate the seasonal and cycle components
   if(ifelse(!is.null(seasons), length(seasons) > 0, FALSE)){
-    ff = data.table(seasonalcycle = prior$seasonalcycle, t = 1:nrow(prior))
+    temp = stats::stl(stats::ts(y - prior$trend, frequency = freq), s.window = 7, s.degree = 1)$time.series
+    prior[, "seasonalcycle" := rowSums(temp[, c("trend", "seasonal")]) + 2/3*temp[, "remainder"]][, "remainder" := 1/3*temp[, "remainder"]]
+    prior[, "cycle" := temp[, "trend"]]# + 1/3*temp[, "remainder"]]
+    ff = data.table(seasonal = prior$seasonalcycle - prior$cycle, t = 1:nrow(prior))
     for(j in c(seasons, cycle)){
       ff[, paste0("sin", j) := sin(2*pi*1/j*t)]
       ff[, paste0("cos", j) := cos(2*pi*1/j*t)]
     }
     ff[, "t" := NULL]
-    lm_s = stats::lm(seasonalcycle ~ ., data = ff)
+    lm_s = stats::lm(seasonal ~ ., data = ff)
     prior = cbind(prior, do.call("cbind", lapply(seasons, function(x){
-      matrix(stats::coef(lm_s)["(Intercept)"]/(length(seasons) + 1) +
+      matrix(stats::coef(lm_s)["(Intercept)"]/length(seasons) +
                c(as.matrix(ff[, paste0(c("sin", "cos"), x), with = FALSE]) %*%
                    matrix(stats::coef(lm_s)[paste0(c("sin", "cos"), x)], ncol = 1)),
              ncol = 1)
     })))
     colnames(prior)[(ncol(prior) - length(seasons) + 1):ncol(prior)] = paste0("seasonal", seasons)
     prior[, "seasonal" := rowSums(prior[, paste0("seasonal", seasons), with = FALSE])]
-    prior[, "cycle" := seasonalcycle - seasonal - lm_s$residuals]
     prior[, "remainder" := y - trend - seasonal - cycle]
   }
-  
-  prior[, "seasonal_adj" := trend + remainder]
+  suppressWarnings(prior[, "seasonalcycle" := NULL])
   return(prior)
 }
+

@@ -139,7 +139,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   if(!is.null(cores)){
     if(cores > parallel::detectCores()){
       cores = parallel::detectCores()
-      warning("'cores' was set to be more than the available number of cores on the machine. Setting 'cores' to parallel::detectCores().")
+      message("cores was set to be more than the available number of cores on the machine. Setting 'cores' to parallel::detectCores().")
     }
   }
   stsm_check_y(y)
@@ -161,8 +161,16 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   exo = stsm_format_exo(exo, dates, range)
   
   #Set up parallel computing
-  cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), parallel::detectCores()), cores)))
-  doSNOW::registerDoSNOW(cl)
+  cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), parallel::detectCores(), cores)))),
+                error = function(err){
+                  message("Parallel setup failed. Using single core.")
+                  return(NULL)
+                })
+  if(!is.null(cl)){
+    doSNOW::registerDoSNOW(cl)
+  }else{
+    cores = 1
+  }
   
   #Set the decomposition
   if(verbose == TRUE & (is.null(decomp) | is.null(seasons) | is.null(trend))){
@@ -193,7 +201,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   if(is.null(seasons) | all(seasons == FALSE)){
     seasons = numeric(0)
   }
-
+  
   #Detect cycle
   if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE) & length(y) >= 3*freq){
     if(verbose == TRUE){
@@ -336,13 +344,11 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   par = constraints[["par"]]
   constraints = constraints[["constraints"]]
   #Test that constraints hold for initial parameter values: constraints[[1]] %*% matrix(par, ncol = 1) > -constraints[[2]]
-
+  
   #Define the objective function
-  objective = function(par, y, freq, decomp, trend, init){
-    yt = matrix(y, nrow = 1)
+  objective = function(par, yt, freq, decomp, trend, init){
     sp = stsm_ssm(par, yt, decomp, trend, init)
-    ans = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dm, sp$Am, sp$Fm, sp$Hm, sp$Qm, sp$Rm,
-                        yt, X, sp$beta, smooth = FALSE)
+    ans = kalman_filter(sp, yt, X, smooth = FALSE)
     return(ans$loglik)
   }
   
@@ -355,7 +361,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                   start = par, method = o, fixed = fixed,
                                   finalHessian = FALSE, hess = NULL, control = list(printLevel = ifelse(verbose == TRUE, 2, 0), iterlim = maxit),
                                   constraints = constraints,
-                                  y = y, freq = freq, decomp = decomp, trend = trend, init = init),
+                                  yt = matrix(y, nrow = 1), freq = freq, decomp = decomp, trend = trend, init = init),
                    error = function(err){NULL})
     if(!is.null(out)){
       break
@@ -368,7 +374,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   }
   
   #Stop the cluster
-  parallel::stopCluster(cl)
+  if(!is.null(cl)){
+    parallel::stopCluster(cl)
+  }
   
   #Retrieve the model output
   out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"] = 
@@ -376,13 +384,13 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   k = length(out$estimate) - 1
   n = length(y[!is.na(y)])
   fit = suppressWarnings(data.table(trend = trend, freq = freq, freq_name = freq_name, standard_freq = standard_freq,
-                               seasons = paste(seasons, collapse = ", "),
-                               cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
-                               decomp = decomp, multiplicative = multiplicative, 
-                               convergence = (out$code == 0), 
-                               loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
-                               AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),
-                               coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
+                                    seasons = paste(seasons, collapse = ", "),
+                                    cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
+                                    decomp = decomp, multiplicative = multiplicative, 
+                                    convergence = (out$code == 0), 
+                                    loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
+                                    AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),
+                                    coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
   ))
   return(fit)
 }

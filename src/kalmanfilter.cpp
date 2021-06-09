@@ -29,7 +29,7 @@ arma::mat Rginv(const arma::mat& m){
 }
 
 // [[Rcpp::export]]
-arma::mat gen_inv(arma::mat m){
+arma::mat gen_inv(arma::mat& m){
   arma::mat out(m.n_rows, m.n_cols);
   try{
     out = inv(m);
@@ -40,10 +40,18 @@ arma::mat gen_inv(arma::mat m){
 }
 
 // [[Rcpp::export]]
-Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat Dm,
-                         const arma::mat Am, const arma::mat Fm, const arma::mat Hm,
-                         const arma::mat Qm, const arma::mat Rm, const arma::mat yt,
-                         const arma::mat X, const arma::mat beta, bool smooth = false){
+Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt, const arma::mat& X, bool smooth = false){
+  
+  //Initialize matrices
+  arma::mat B0 = sp["B0"];
+  arma::mat P0 = sp["P0"];
+  arma::mat Dm = sp["Dm"];
+  arma::mat Am = sp["Am"];
+  arma::mat Fm = sp["Fm"];
+  arma::mat Hm = sp["Hm"];
+  arma::mat Qm = sp["Qm"];
+  arma::mat Rm = sp["Rm"];
+  arma::mat beta = sp["beta"];
   
   //Initialize the filter
   arma::mat B_LL = B0;
@@ -65,6 +73,7 @@ Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat
   //Define some matrix transforms
   arma::mat Fm_t = Fm.t();
   arma::mat Hm_t = Hm.t();
+  arma::mat F_ti_inv;
   
   //Kalman filter routine
   for(int i = 0; i < n_cols; i++){
@@ -74,7 +83,8 @@ Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat
     P_tl.slice(i) = Fm * P_LL * Fm_t + Qm; //Initial estimate of the covariance matrix conditional on t-1
     N_t.col(i) = yt.col(i) - Am - Hm * B_tl.col(i) - beta * X.col(i); //Prediction error conditional on t-1
     F_t.slice(i) = Hm * P_tl.slice(i) * Hm_t + Rm; //Variance of the prediction error conditional on t-1
-    K_t.slice(i) = P_tl.slice(i) * Hm_t * gen_inv(F_t.slice(i)); //Kalman gain conditional on t-1
+    F_ti_inv = gen_inv(F_t.slice(i));
+    K_t.slice(i) = P_tl.slice(i) * Hm_t * F_ti_inv; //Kalman gain conditional on t-1
     
     //Find any missing values and replace them with 0 so final estimates will be the same as the initial estimates for this iteration
     na_idx = arma::find_nonfinite(N_t.col(i));
@@ -87,7 +97,7 @@ Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat
       //Final estimates conditional on t
       B_tt.col(i) = B_tl.col(i) + K_t.slice(i) * N_t.col(i); //Final estimate of the unobserved values
       P_tt.slice(i) = P_tl.slice(i) - K_t.slice(i) * Hm * P_tl.slice(i); //Final estimate of the covariance matrix
-      lnl = lnl + 0.5*arma::as_scalar((log(det(F_t.slice(i))) +  N_t.col(i).t() * gen_inv(F_t.slice(i)) * N_t.col(i)));
+      lnl = lnl + 0.5*arma::as_scalar((log(det(F_t.slice(i))) +  N_t.col(i).t() * F_ti_inv * N_t.col(i)));
     }
     
     //Reinitialize for the next iteration
@@ -123,5 +133,3 @@ Rcpp::List kalman_filter(const arma::mat B0, const arma::mat P0, const arma::mat
 //git config remote.origin.url git@github.com:user/autostsm.git
 
 //Rcpp::sourceCpp("src/kalmanfilter.cpp")
-
-

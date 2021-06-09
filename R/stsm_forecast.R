@@ -164,8 +164,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   #Filter and smooth the data
   sp = stsm_ssm(par, y, decomp, trend, init)
-  B_tt = kalman_filter(matrix(sp$B0, ncol = 1), sp$P0, sp$Dm, sp$Am, sp$Fm, sp$Hm, sp$Qm, sp$Rm,
-                       matrix(y, nrow = 1), X, sp$beta, smooth)$B_tt
+  B_tt = kalman_filter(sp, matrix(y, nrow = 1), X, smooth)$B_tt
   rownames(B_tt) = rownames(sp$Fm)
 
   #Get the unobserved series
@@ -359,7 +358,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   
   #Get the remainder
-  series[, "remainder" := c(y, y.fc) - trend - cycle - seasonal]
+  series[, "remainder" := c(y, y.fc) - fitted]
   
   #Combine the filtered series
   final = data.table(date = c(dates, dates.fc), observed = c(y, y.fc), 
