@@ -21,38 +21,47 @@
 #' @export
 stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
   #Bind data.table variables to the global environment
-  seasonal_adj = trend = seasonal = NULL
+  seasonal_adj = trend = seasonal = seasonal2 = cycle = cycle2 = NULL
   multiplicative = FALSE
   
   if(all(stats::na.omit(y) > 0)){
-    if(any(is.na(y))){
-      y = suppressWarnings(imputeTS::na_kalman(y))
-    }
     if(is.null(prior)){
       prior = stsm_prior(y, freq) 
     }else{
       prior = copy(prior)
     }
-    prior[, "seasonalcycle" := y - trend]
-    ol = forecast::tsoutliers(stats::ts(prior$seasonalcycle, frequency = freq))
-    prior[ol$index, "seasonalcycle" := ol$replacements]
-    
-    if(!all(prior$seasonalcycle == 0)){
+      
+    if(!all(prior[!is.na(seasonal), ]$seasonal == 0)){
       #Test for increasing/decreasing seasonal amplitude
-      multiplicative = (multiplicative | tsutils::coxstuart(stats::na.omit(prior$seasonalcycle), type = "dispersion")$p.value <= sig_level)
+      #Remove outliers for sensitivity
+      prior[, "seasonal2" := y - trend - cycle]
+      prior[, "seasonal2" := forecast::tsclean(seasonal2, replace.missing = FALSE)]
+      multiplicative = (multiplicative | stsm_coxstuart(stats::na.omit(prior$seasonal2), type = "deviation")$p.value <= sig_level)
+      prior[, "seasonal2" := NULL]
+    }
+    
+    if(!all(prior[!is.na(cycle), ]$cycle == 0)){
+      #Test for increasing/decreasing cycle amplitude
+      #Remove outliers for sensitivity
+      prior[, "cycle2" := y - trend - seasonal]
+      prior[, "cycle2" := forecast::tsclean(cycle2, replace.missing = FALSE)]
+      multiplicative = (multiplicative | stsm_coxstuart(stats::na.omit(prior$cycle2), type = "deviation")$p.value <= sig_level)
+      prior[, "cycle2" := NULL]
     }
     
     #PE test for non-nested models and functional form choice: linear vs log model
-    prior[, "t" := 1:.N][, "seasonal_adj" := y - seasonal]
-    if(any(prior$seasonal_adj < 0)){
+    prior[, "t" := 1:.N][, "seasonal_adj" := y - seasonal - cycle]
+    if(any(prior[!is.na(seasonal_adj), ]$seasonal_adj < 0)){
       prior[, "seasonal_adj" := seasonal_adj + abs(min(seasonal_adj, na.rm = TRUE)) + 1]
     }
-    prior = prior[!is.na(seasonal_adj), ]
-    lm_lin = stats::lm(seasonal_adj ~ t, prior)
+    #Remove outliers for sensitivity
+    prior[, "seasonal_adj" := forecast::tsclean(seasonal_adj, replace.missing = FALSE)]
+    lm_lin = stats::lm(seasonal_adj ~ t, prior[!is.na(seasonal_adj), ])
     lm_log = stats::update(lm_lin, log(seasonal_adj) ~ t)
-    stat = lmtest::petest(lm_lin, lm_log)$`Pr(>|t|)`
+    stat = lmtest::petest(lm_lin, lm_log, vcov. = sandwich::vcovHAC)$`Pr(>|t|)`
     #To select log model, the linear model must be rejected while the log model must fail to be rejected
     multiplicative = (multiplicative | (stat[1] <= sig_level & stat[2] > sig_level))
+    prior[, "seasonal_adj" := NULL]
   }
   return(multiplicative)
 }

@@ -42,7 +42,8 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
   
   #Adjust the seasonal value
   prior[, "seasonal" := y - trend]
-  if(tsutils::coxstuart(stats::na.omit(prior$seasonal), type = "dispersion")$p.value <= sig_level){
+  if(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$seasonal, replace.missing = FALSE)), 
+                    type = "deviation")$p.value <= sig_level){
     prior[, "seasonal" := y/trend]
   }
   prior[, "t" := 1:.N]
@@ -119,7 +120,8 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
   
   if(length(harmonics) > 0){
     #Setup parallel computing
-    if(is.null(cl) | ifelse(!is.null(cores), cores > 1, FALSE)){
+    if(is.null(cl) & ifelse(!is.null(cores), cores > 1, TRUE)){
+      #if cluster is null and (cores is not null or > 0)
       cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(harmonics), parallel::detectCores())), cores)))),
                     error = function(err){
                       message("Parallel setup failed. Using single core.")
@@ -152,7 +154,7 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
       invisible(pb$tick(0))
       progress = function(n){pb$tick()}
     }else{
-      progress = NULL
+      pb = progress = NULL
     }
     
     #Wavelet analysis for the seasonality
@@ -171,7 +173,11 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
       pval = stats::pf(summary(lm)$fstatistic["value"], lower.tail = FALSE,
                        df1 = summary(lm)$fstatistic["numdf"], 
                        df2 = summary(lm)$fstatistic["dendf"])
-      tryCatch(pb$tick())
+      
+      if(stop_cluster == FALSE & show_progress == TRUE){
+        pb$tick()
+      }
+      
       return(data.table(frequency = i/freq, period = freq/i, fstat = summary(lm)$fstatistic["value"], pval = pval))
     }
     wave[, "df" := unique(signif(diff(frequency)))[1]]

@@ -11,7 +11,8 @@ stsm_init_pars(
   cycle,
   decomp = "",
   seasons = NULL,
-  prior = NULL
+  prior = NULL,
+  sig_level = 0.01
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ stsm_init_pars(
 \item{seasons}{The seasonal lengths to split the seasonality into}
 
 \item{prior}{A data table created by stsm_prior}
+
+\item{sig_level}{Significance level for statistical tests}
 }
 \value{
 named vector containing the initial parameter estimates for estimation

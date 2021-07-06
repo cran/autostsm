@@ -83,28 +83,29 @@ where $\lambda$ is the frequency of the cycle and $\phi_c \in{(0,1)}$ to make th
 
 $$
 \begin{bmatrix}
-c_t \\
-c_{t-1} \\
-e_t
+c_t \\ c_{t-1} \\ \vdots \\ c_{t-p+2} \\ c_{t-p+1} \\ e_t \\ e_{t-1} \\ \vdots \\ e_{t-q+2} \\ e_{t-q+1}
 \end{bmatrix} = 
 \begin{bmatrix}
-\phi_{c,1} & \phi_{c,2} & \theta_{c,1} \\
-1 & 0 & 0 \\
-0 & 0 & 0
+\phi_{c,1} & \phi_{c,2} & \ldots & \phi_{c,p-1} & \phi_{c,p} & \theta_{c,1} & \theta_{c,2} & \ldots & \theta_{c,q-1} & \theta_{c,q} \\
+1 & 0 & \ldots & 0 & 0 & \ldots & \ldots & \ldots & \ldots & 0 \\
+0 & \ddots &  & \vdots & \vdots & \ddots &  & \ddots &  &  \vdots \\
+\vdots &  & \ddots & \vdots & \vdots &  & \ddots& & \ddots & \vdots \\
+0 & \ldots & \dots & 1 & 0 & \ldots & \ldots & \ldots & \dots & 0 \\
+0 & \ldots & \ldots & \ldots & 0 & \ldots & \ldots & \ldots & \ldots & 0 \\
+\vdots & \ddots &  &  & \vdots & 1 & 0 & \ldots & 0 & \vdots \\
+\vdots &  & \ddots &  & \vdots & 0 & \ddots &  & \vdots & \vdots \\
+\vdots &  &  & \ddots & \vdots & \vdots &  & \ddots & \vdots & \vdots \\
+0 & \ldots & \ldots & \ldots & 0 & 0 & \ldots & \ldots & 1 & 0\\
 \end{bmatrix}
 \begin{bmatrix}
-c_{t-1} \\
-c_{t-2} \\
-e_{t-1}
+c_{t-1} \\ c_{t-2} \\ \vdots \\ c_{t-p+1} \\ c_{t-p} \\ e_{t-1} \\ e_{t-2} \\ \vdots \\ e_{t-q+1} \\e_{t-q}
 \end{bmatrix} + 
 \begin{bmatrix}
-e_t \\
-0 \\
-e_t
+e_t \\ 0 \\ \vdots \\ \vdots \\ 0 \\ e_t \\ 0 \\ \vdots \\ \vdots \\0
 \end{bmatrix}, 
 e_t \sim N(0, \sigma_c^2)
 $$
-Th ARMA(2,1) specification can have real or complex roots, while the trigonometric specification will only have complex roots. The trigonometric specification is a special case of the ARMA(2,1) specification if it exists but was not detected by wavelet analysis.
+where $p$ is the autoregressive lag length and $q$ is the moving average lag length. The ARMA(p,q) specification can have real or complex roots, while the trigonometric specification will only have complex roots. The trigonometric specification is a special case of an ARMA(2,1) specification.
 
 If the roots are complex, the dynamics will be damped oscillations about the trend, which may not always be desirable. If the user would like to remove oscillations from the forecast that are caused by the complex roots, the user can specify, `dampen_cycle = TRUE` in `stsm_forecast`. This option will smooth the forecast of the cycle into the trend using a fitted sigmoid curve.
 
@@ -160,23 +161,11 @@ The numeric frequency reflects the number of periods in one year. Once the frequ
 
 ### Seasonal and Cycle Adjustment
 
-Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The `loess` function in the `stats` package requires that there are no missing values in the data, so any missing values are computed with the `na_kalman` function from the `imputeTS` package. If you know the missing data pattern in your data (i.e missing data should be 0), it's best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the `smooth.spline` function of the `stats` package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by first decomposing the seasonal-cycle using the `stl` function from the `stats` package then regressing the seasonal component on a Fourier series composed of the seasonal periods. 
-
-### Multiplicative vs Additive Detection
-
-The second step is to determine if the model should be based on a multiplicative of additive model. For a multiplicative model, the data must all be positive and satisfy one of two tests. The model is restricted to multiplicative of additive decomposition, rather than allowing the full range of Box-Cox transformations, so that the decomposition is easy to compare to the original time series. Additive makes the decomposition comparative in levels, multiplicative makes the decomposition comparative in percentages relative to the original time series, but Box-Cox transformations don't have an easy interpretation like this. However, the user can Box-Cox transform the data prior to estimation and specify `multilicative = FALSE` if that method is preferred.
-
-#### Trend Test
-
-The first test is a test of a linear vs exponential trend. This test compares the log likelihood of 1) a linear regression of the seasonal and cycle adjusted data vs a linear trend, and 2) a linear regression of the logged seasonal and cycle adjusted data vs a linear trend using the `petest` from the `lmtest` package. A log trend model is selected if and only if the linear model is rejected and the log model is not rejected.
-
-#### Seasonal-Cycle Amplitude Test
-
-The second test is a test for constant seasonal-cycle amplitude using the Cox-Stuart dispersion test from the `tsutils` package (using the `coxstuart` function) on the detrended data. Then, if the seasonal component is determined to have changing amplitude, a multiplicative model is used. However, since this test is sensitive to outliers, outliers in the seasonal-cycle series are detected and replaced using the `forecast`'s package `tsoutliers` function before the test is performed.
+Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The `loess` function in the `stats` package requires that there are no missing values in the data, so any missing values are computed using the Kalman filter with a local trend using the `stats` package's `StructTS` and `KalmanSmooth` functions. If you know the missing data pattern in your data (i.e missing data should be 0), it's best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the `smooth.spline` function of the `stats` package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by first decomposing the seasonal-cycle using the `mstl` function from the `forecast` package then regressing the seasonal component on a Fourier series composed of the seasonal periods. 
 
 ### Seasonality Detection
 
-The second step is wavelet analysis for seasonal detection, which is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each seasonal harmonic using the equation
+The first step is wavelet analysis for seasonal detection, which is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart deviation test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each seasonal harmonic using the equation
 
 $$
 \tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
@@ -184,13 +173,13 @@ $$
 
 for harmonics $j$ that correspond to the spectrum of minutely, hourly, workday hours, half daily, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly seasonal frequencies where applicable. However, since this limits the number of frequencies tested, a linear space of 100 items is created between each harmonic so that the space captures 1% of the distance between the original two harmonics. If a nonstandard frequency is detected, the harmonics are set to $j = \lfloor \frac{f}{2} \rfloor$, but only taking 1000 equally spaced harmonics for harmonics that have at least 3 cycles in the data. This strategy limits the number of harmonics tested for speed, while also trying to capture some a priori important seasonalities based on the frequency of the data. 
 
-At each iteration, an F-test is performed to measure the significance of the harmonic in explaining the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. The frequencies (defined as $\frac{f}{j}$) are then matched to the spectrum of seasonalities that correspond to the a priori important seasonal spectrum if the frequency of the harmonic is within one delta of the frequency of this predefined spectrum. This delta is equal to the unique difference between the frequencies of the harmonics.
+At each iteration, an F-test is performed using the `waldtest` function from the `lmtest` package to measure the significance of the harmonic in explaining the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. The frequencies (defined as $\frac{f}{j}$) are then matched to the spectrum of seasonalities that correspond to the a priori important seasonal spectrum if the frequency of the harmonic is within one delta of the frequency of this predefined spectrum. This delta is equal to the unique difference between the frequencies of the harmonics.
 
 Lastly, backward stepwise regression procedure using an F-test for the significance of each seasonality (i.e. joint significance of $a_j$ and $b_j$ is used to build the final seasonality specification starting with only the harmonics that were statistically significant from the first step. At each stage of the of the stepwise procedure, an F-test for the statistical significance of each seasonality is performed and any harmonics that are not statistically significant are removed. The process is performed iteratively until all remaining harmonics are statistically significant. The F-tests for this procedure are calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.
 
 ### Cycle Detection 
 
-Next, wavelet analysis for cycle detection is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each harmonic using the equation
+Next, wavelet analysis for cycle detection is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart deviation test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each harmonic using the equation
 
 $$
 \tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
@@ -198,17 +187,29 @@ $$
 
 for harmonics $j = 0.01$ to $j = 0.99$ for every 0.01 and truncated for harmonics that correspond to periods $\in [ 2.5f, T]$ and harmonics < $1/2$ where $T$ is the length of the data.
 
-At each iteration, an F-test is performed to measure the significance of the harmonic to explain the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. Once all harmonics have been tested, the algorithm looks for a global maximum from the power spectrum measured with the F-statistic that is statistically significant. 
+At each iteration, an F-test is performed using the `waldtest` function from the `lmtest` package to measure the significance of the harmonic to explain the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. Once all harmonics have been tested, the algorithm looks for a global maximum from the power spectrum measured with the F-statistic that is statistically significant. 
 
 Lastly, a final regression is performed with only the harmonic that was selected from the first step. From this regression, the harmonic is kept only if the cycle is statistically significant (i.e. $a_j$ and $b_j$ are jointly significant) as measured by the F-test for the final harmonic regression. The F-test for this step is calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.
 
-The cycle is set to the trigonometric form if a cycle is detected using wavelet analysis. Otherwise, it is set to the ARMA specification. 
+The cycle is set to the trigonometric form if a cycle is detected using wavelet analysis. Otherwise, it is set to the ARMA(p,q) specification. 
+
+### Multiplicative vs Additive Detection
+
+The third step in the model construction is to determine if the model should be based on a multiplicative of additive model. However, after the seasonal and cycle steps are completed, a new model prior is created based on the seasonal and cycle periods detected. For a multiplicative model, the data must all be positive and satisfy one of two tests. The model is restricted to multiplicative of additive decomposition, rather than allowing the full range of Box-Cox transformations, so that the decomposition is easy to compare to the original time series. Additive makes the decomposition comparative in levels, multiplicative makes the decomposition comparative in percentages relative to the original time series, but Box-Cox transformations don't have an easy interpretation like this. However, the user can Box-Cox transform the data prior to estimation and specify `multilicative = FALSE` if that method is preferred.
+
+#### Trend Test
+
+First, is a test of a linear vs exponential trend. This test compares the log likelihood of 1) a linear regression of the seasonal and cycle adjusted data vs a linear trend, and 2) a linear regression of the logged seasonal and cycle adjusted data vs a linear trend using the `petest` from the `lmtest` package with heteroskedastic and autocorrelated standard errors using the `sandwich` package's `vcovHAC` function. A log trend model is selected if and only if the linear model is rejected and the log model is not rejected.
+
+#### Seasonal-Cycle Amplitude Test
+
+Next, is a test for constant seasonal and cycle amplitudes using the Cox-Stuart deviation test on the detrended (and de-seasonalized or de-cycled) data. Then, if the seasonal component is determined to have changing amplitude, a multiplicative model is used. However, since this test is sensitive to outliers, outliers in the seasonal and cycle series are detected and replaced using the `forecast`'s package `tsclean` function without replacing missing values before the test is performed.
 
 ### Trend Detection
 
-The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the `forecast` package's `ndiffs` functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the `forecast`'s package `tsoutliers` function before the test is performed.
+The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the `forecast` package's `ndiffs` functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the `forecast`'s package `tsclean` function without replacing missing values before the test is performed.
 
-The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test from the `tsutils` package is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
+The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
 
 If the data is determined to be 
 
@@ -301,13 +302,13 @@ for all values that are not missing.
 
 ### Model Prior
 
-Initial parameter values are essential for finding a good model when using maximum likelihood estimation. To this end, the algorithm uses initial parameter values derived from a decomposition using the `stl` function, which acts like the model prior and is represented by 
+Initial parameter values are essential for finding a good model when using maximum likelihood estimation. To this end, the algorithm uses initial parameter values derived from a decomposition using the `mstl` function, which acts like the model prior and is represented by 
 
 $$
 Y_t^* = T_t^* + C_t^* + S_t^* + e_t^*
 $$
 
-This function will decompose the time series into trend and seasonality. The seasonality is then further split into the seasonal harmonics by fitted a linear regression on the seasonal Fourier series and extracting the fitted components. Finally, the trend is further split into a smoother trend and the cycle by fitting a loess trend to the `stl` trend using the `loess` function. The drift is then derived by taking the first difference of the trend. 
+This function will decompose the time series into trend and seasonality. The seasonality is then further split into the seasonal harmonics by fitted a linear regression on the seasonal Fourier series and extracting the fitted components. Finally, the trend is further split into a smoother trend and the cycle by fitting a loess trend to the `mstl` trend using the `loess` function. The drift is then derived by taking the first difference of the trend. 
 
 ### Trend and Drift Initial Values
 
@@ -315,7 +316,7 @@ These parameters are set initial to match to the theoretical variance of the mod
 
 ### Cycle Initial Values
 
-If the cycle model is set to the ARMA specification or a cycle is not detected, an ARMA(2, 0, 1) process is fit to the cycle prior to set the parameters for the cycle component. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, $\lambda$ is set to be $\frac{2\pi}{c}$ where $c$ is the estimated cycle period. $\phi_c$ is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as $\phi_c$ is in a AR(1) process. Finally, $\sigma_c$ is set to the standard deviation of the model errors.
+If the cycle model is set to the ARMA(p,q) specification or a cycle is not detected, $p$ and $q$ are determined using the `forecast` package's `auto.arima` function on the prior cycle. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, $\lambda$ is set to be $\frac{2\pi}{c}$ where $c$ is the estimated cycle period. $\phi_c$ is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as $\phi_c$ is in an AR(1) process. Finally, $\sigma_c$ is set to the standard deviation of the model errors.
 
 ### Seasonality Initial Values
 
@@ -331,7 +332,7 @@ The initial values of the unobserved components must also be initialized. These 
 
 ### Box Constraints
 
-The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include startionarity constraints for the cycle, $0 < \phi_c < 1$ and drift, $-1 < \phi < 1$, as well as $\sigma_x > 0$ for all variance parameters. Trend smoothness constraints
+The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include stationarity constraints for the trigonometric cycle, $0 < \phi_c < 1$, autoregressive cycle $0 < \sum \phi_{c,i} < 1$, moving average component $0 < \sum \theta_{c,i} < 1$, drift $-1 < \phi_d < 1$, as well as $\sigma_x > 0$ for all variance parameters. Trend smoothness constraints
 
 $$
 \sigma_t + \sigma_d < \sigma_e \\

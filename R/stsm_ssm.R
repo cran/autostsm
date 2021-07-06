@@ -24,6 +24,10 @@ stsm_bdiag = function(A, B){
 #' "double-random-walk" is the random walk with random walk drift trend.
 #' "random-walk2" is a 2nd order random walk trend as in the Hodrick-Prescott filter.
 #' @param init Initial state values for the Kalman filter
+#' @param prior Model prior built from stsm_prior. Only needed if prior needs to be built for initial values
+#' @param freq Frequency of the data. Only needed if prior needs to be built for initial values and prior = NULL
+#' @param seasons Numeric vector of seasonal frequencies. Only needed if prior needs to be built for initial values and prior = NULL
+#' @param cycle Numeric value for the cycle frequency. Only needed if prior needs to be built for initial values and prior = NULL
 #' @param model a stsm_estimate model object
 #' @import data.table
 #' @return List of space space matrices
@@ -42,12 +46,19 @@ stsm_bdiag = function(A, B){
 #' }
 #' @export
 stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
-                    trend = NULL, init = NULL, model = NULL){
+                    trend = NULL, init = NULL, model = NULL, 
+                    prior = NULL, freq = NULL, seasons = NULL, cycle = NULL){
   if(!is.null(model)){
     par = eval(parse(text = paste0("c(", model$coef, ")")))
     trend = model$trend
     decomp = model$decomp
+    freq = model$freq
+    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
+    cycle = model$cycle
   }
+  
+  #Bind data.table variables to the global environment
+  drift = remainder = NULL
   
   if(!is.null(yt)){
     yt = matrix(yt[!is.na(yt)], nrow = 1)
@@ -121,16 +132,15 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     colnames(Qm) = rownames(Qm) = rownames(Fm)
   }else if(sum(grepl("phi_c\\.\\d+|theta_c\\.\\d+", names(par))) > 0){
     #Define the ARMA part of the cycle/noise component
-    par["phi_c.2"] = -par["phi_c.1"]^2/4
     len = sum(grepl("phi_c\\.\\d+|theta_c\\.\\d+", names(par))) 
     Cm = rbind(par[grepl("phi_c|theta_c", names(par))], 
                matrix(0, nrow = len - 1, ncol = len))
     colnames_c = rownames_c = c()
-    if(sum(grepl("phi_c", names(par))) > 0){
+    if(sum(grepl("phi_c\\.\\d+", names(par))) > 0){
       colnames_c = c(colnames_c, paste0("Ct_", gsub("phi_c\\.", "", names(par)[grepl("phi_c\\.\\d+", names(par))])))
       rownames_c = c(rownames_c, paste0("Ct_", as.numeric(gsub("phi_c\\.", "", names(par)[grepl("phi_c\\.\\d+", names(par))])) - 1))
     }
-    if(sum(grepl("theta_c", names(par))) > 0){
+    if(sum(grepl("theta_c\\.\\d+", names(par))) > 0){
       colnames_c = c(colnames_c, paste0("et_", gsub("theta_c\\.", "", names(par)[grepl("theta_c\\.\\d+", names(par))])))
       rownames_c = c(rownames_c, paste0("et_", as.numeric(gsub("theta_c\\.", "", names(par)[grepl("theta_c\\.\\d+", names(par))])) - 1))
     }
@@ -180,13 +190,59 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   Rm = matrix(par["sig_e"]^2, nrow = 1, ncol = 1)
   
   #Initial guess for unobserved vector
-  if(any(rownames(Fm) %in% names(par))){
-    B0 = matrix(par[rownames(Fm)], ncol = 1, dimnames = list(rownames(Fm), NULL))
+  if(all(rownames(Fm)[grepl("_0", rownames(Fm))] %in% names(par))){
+    B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
+    if(any(grepl("Tt_", rownames(B0)))){
+      B0[grepl("Tt_", rownames(B0)), ] = par[grepl("Tt_", names(par))]
+    }
+    if(any(grepl("Ct_", rownames(B0)))){
+      B0[grepl("Ct_|Cts_", rownames(B0)), ] = par[grepl("Ct_", names(par))]
+    }
+    if(any(grepl("Dt_", rownames(B0)))){
+      B0[grepl("Dt_", rownames(B0)), ] = par[grepl("Dt_", names(par))]
+    }
+    if(any(grepl("et_", rownames(B0)))){
+      B0[grepl("et_", rownames(B0)), ] = par[grepl("et_", names(par))]
+    }
+    if(grepl("seasonal", decomp)){
+      if(!is.null(seasons)){
+        for(j in seasons){
+          B0[grepl(paste(paste0(c("St", "Sts"), j), collapse = "|"), rownames(B0)), ] = 
+            par[grepl(paste0("St", j), names(par))]
+        }
+      }
+    }
   }else if(!is.null(init)) {
     B0 = init[["B0"]]
   }else{
+    #Build the prior
+    if(is.null(prior)){
+      prior = stsm_prior(c(yt), freq, decomp, seasons, cycle) 
+    }else{
+      prior = copy(prior)
+    }
+    
     B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
-    B0[grepl("Tt", rownames(B0)), ] = yt[1, 1]
+    if(any(grepl("Tt_", rownames(B0)))){
+      B0[grepl("Tt_", rownames(B0)), ] = prior[!is.na(trend), ]$trend[1]
+    }
+    if(any(grepl("Ct_", rownames(B0)))){
+      B0[grepl("Ct_|Cts_", rownames(B0)), ] = prior[!is.na(cycle), ]$cycle[1]
+    }
+    if(any(grepl("Dt_", rownames(B0)))){
+      B0[grepl("Dt_", rownames(B0)), ] = prior[!is.na(drift), ]$drift[1]
+    }
+    if(any(grepl("et_", rownames(B0)))){
+      B0[grepl("et_", rownames(B0)), ] = prior[!is.na(remainder), ]$remainder[1]
+    }
+    if(grepl("seasonal", decomp)){
+      if(!is.null(seasons)){
+        for(j in seasons){
+          B0[grepl(paste(paste0(c("St", "Sts"), j), collapse = "|"), rownames(B0)), ] = 
+            prior[!is.na(eval(parse(text = paste0("seasonal", j)))), c(paste0("seasonal", j)), with = FALSE][[1]][1]
+        }
+      }
+    }
   }
   
   #Initial guess for variance of the unobserved vector

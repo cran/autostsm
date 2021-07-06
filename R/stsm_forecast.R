@@ -40,12 +40,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #freq = exo = exo.fc = n.hist = NULL
   #plot = plot.decomp = plot.fc = smooth = TRUE
   #dampen_cycle = FALSE
-  #stsm_build_dates = autostsm:::stsm_build_dates
-  #stsm_init_vals = autostsm:::stsm_init_vals
-  #stsm_check_y = autostsm:::stsm_check_y
-  #stsm_check_exo = autostsm:::stsm_check_exo
-  #stsm_check_exo_fc = autostsm:::stsm_check_exo_fc
-  #stsm_format_exo = autostsm:::stsm_format_exo
+  # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
+  #   tryCatch(source(i), error = function(err){NULL})
+  # }
   #Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
@@ -144,51 +141,43 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   sd = stats::sd(y, na.rm = TRUE)
   y = (y - mean)/sd
   
-  #Get model specifications
-  decomp = model$decomp
-  trend = model$trend
+  #Get the seasons
   if(!is.na(model$seasons)){
     seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
   }else{
     seasons = c()
   }
-  if(!is.na(model$cycle)){
-    cycle = model$cycle
-  }else{
-    cycle = c()
-  }
   
   #Get the coefficients
   par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
   
   #Filter and smooth the data
-  sp = stsm_ssm(par, y, decomp, trend, init)
-  B_tt = kalman_filter(sp, matrix(y, nrow = 1), X, smooth)$B_tt
-  rownames(B_tt) = rownames(sp$Fm)
+  ssm = stsm_ssm(yt = y, model = model)
+  B_tt = kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt
+  rownames(B_tt) = rownames(ssm$Fm)
 
   #Get the unobserved series
   series = data.table(t(B_tt))
-  series$fitted = c(matrix(sp$Am, nrow = 1, ncol = nrow(series)) + 
-                      sp$Hm %*% t(as.matrix(series[, rownames(B_tt), with = FALSE])) + 
+  series$fitted = c(matrix(ssm$Am, nrow = 1, ncol = nrow(series)) + 
+                      ssm$Hm %*% t(as.matrix(series[, rownames(B_tt), with = FALSE])) + 
                       matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, 1:length(y)])
 
   #Forecast
   if(n.ahead > 0){
-    Fm_pow = diag(nrow(sp$Fm))
+    Fm_pow = diag(nrow(ssm$Fm))
     for(j in 1:n.ahead){
-      Fm_pow = Fm_pow %*% sp$Fm
-      series = rbind(series, cbind(t(sp$Dm + sp$Fm %*% t(as.matrix(series[.N, rownames(B_tt), with = FALSE]))),
-                                   c(sp$Hm %*% (Fm_pow %*% sp$Qm %*% t(Fm_pow)) %*% t(sp$Hm))),
+      Fm_pow = Fm_pow %*% ssm$Fm
+      series = rbind(series, cbind(t(ssm$Dm + ssm$Fm %*% t(as.matrix(series[.N, rownames(B_tt), with = FALSE]))),
+                                   c(ssm$Hm %*% (Fm_pow %*% ssm$Qm %*% t(Fm_pow)) %*% t(ssm$Hm))),
                      use.names = TRUE, fill = TRUE)
     }
     colnames(series)[ncol(series)] = "fev"
-    series[!is.na(fev), "fev" := cumsum(fev) + c(sp$Rm)]
+    series[!is.na(fev), "fev" := cumsum(fev) + c(ssm$Rm)]
     
-    if(dampen_cycle == TRUE & is.complex(eigen(sp$Fm[grepl("Ct|et", colnames(sp$Fm)), grepl("Ct|et", rownames(sp$Fm))])$values) & n.ahead > 1){
+    if(dampen_cycle == TRUE & is.complex(eigen(ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))])$values) & n.ahead > 1){
       #Smooth the cycle forecast into the trend using a sigmoid function so as not to get oscillating cycle forecasts
-      Fm = sp$Fm[grepl("Ct|et", colnames(sp$Fm)), grepl("Ct|et", rownames(sp$Fm))]
-      B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(sp$Fm))], with = FALSE]), ncol = 1)
+      Fm = ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))]
+      B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(ssm$Fm))], with = FALSE]), ncol = 1)
       for(j in 1:n.ahead){
         B = cbind(B, Fm %*% B[, ncol(B)])
       }
@@ -219,8 +208,8 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       }
     }
     
-    series[!is.na(fev), "fitted" := c(matrix(sp$Am, nrow = 1, ncol = nrow(series[!is.na(fev), ])) +  + 
-                                        sp$Hm %*% t(as.matrix(series[!is.na(fev), rownames(B_tt), with = FALSE])) + 
+    series[!is.na(fev), "fitted" := c(matrix(ssm$Am, nrow = 1, ncol = nrow(series[!is.na(fev), ])) +  + 
+                                        ssm$Hm %*% t(as.matrix(series[!is.na(fev), rownames(B_tt), with = FALSE])) + 
                                         matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, (length(y) + 1):ncol(X)])]
     
     series[!is.na(fev), paste0((1/2 - ci/2)*100, "%") := stats::qnorm(1/2 - ci/2, fitted, sqrt(fev))]
@@ -258,7 +247,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #Build the forecast dates
   `%m+%` = lubridate::`%m+%`
   if(n.ahead > 0){
-    y.fc = c(sp$Am[1, ] + sp$Hm %*% t(as.matrix(series[(length(y) + 1):.N, rownames(B_tt), with = FALSE])))
+    y.fc = c(ssm$Am[1, ] + ssm$Hm %*% t(as.matrix(series[(length(y) + 1):.N, rownames(B_tt), with = FALSE])))
     if(standard_freq == TRUE){
       if(floor(freq) == floor(60*60*24*365.25)){
         #Secondly frequency
@@ -406,7 +395,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       theme_minimal() + guides(color = guide_legend(title = NULL)) +
       theme(legend.position = "bottom")
     
-    if(grepl("seasonal", decomp)){
+    if(grepl("seasonal", model$decomp)){
       seas_plot = data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = colnames(final)[colnames(final) %in% c("seasonal", paste0("seasonal", seasons))])
       seas_plot[, "variable" := factor(variable, levels = c("seasonal", rev(sort(paste0("seasonal", seasons)))), ordered = TRUE)]
       g[["seasonal"]] = ggplot(seas_plot) +

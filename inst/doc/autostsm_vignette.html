@@ -14,61 +14,9 @@
 
 <title>Automatic Structural Time Series Model</title>
 
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
-<style type="text/css">
-a.anchor-section {margin-left: 10px; visibility: hidden; color: inherit;}
-a.anchor-section::before {content: '#';}
-.hasAnchor:hover a.anchor-section {visibility: visible;}
-</style>
-<script>// Anchor sections v1.0 written by Atsushi Yasumoto on Oct 3rd, 2020.
-document.addEventListener('DOMContentLoaded', function() {
-  // Do nothing if AnchorJS is used
-  if (typeof window.anchors === 'object' && anchors.hasOwnProperty('hasAnchorJSLink')) {
-    return;
-  }
-
-  const h = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-
-  // Do nothing if sections are already anchored
-  if (Array.from(h).some(x => x.classList.contains('hasAnchor'))) {
-    return null;
-  }
-
-  // Use section id when pandoc runs with --section-divs
-  const section_id = function(x) {
-    return ((x.classList.contains('section') || (x.tagName === 'SECTION'))
-            ? x.id : '');
-  };
-
-  // Add anchors
-  h.forEach(function(x) {
-    const id = x.id || section_id(x.parentElement);
-    if (id === '') {
-      return null;
-    }
-    let anchor = document.createElement('a');
-    anchor.href = '#' + id;
-    anchor.classList = ['anchor-section'];
-    x.classList.add('hasAnchor');
-    x.appendChild(anchor);
-  });
-});
-</script>
+<script src="data:application/javascript;base64,Ly8gUGFuZG9jIDIuOSBhZGRzIGF0dHJpYnV0ZXMgb24gYm90aCBoZWFkZXIgYW5kIGRpdi4gV2UgcmVtb3ZlIHRoZSBmb3JtZXIgKHRvCi8vIGJlIGNvbXBhdGlibGUgd2l0aCB0aGUgYmVoYXZpb3Igb2YgUGFuZG9jIDwgMi44KS4KZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsIGZ1bmN0aW9uKGUpIHsKICB2YXIgaHMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCJkaXYuc2VjdGlvbltjbGFzcyo9J2xldmVsJ10gPiA6Zmlyc3QtY2hpbGQiKTsKICB2YXIgaSwgaCwgYTsKICBmb3IgKGkgPSAwOyBpIDwgaHMubGVuZ3RoOyBpKyspIHsKICAgIGggPSBoc1tpXTsKICAgIGlmICghL15oWzEtNl0kL2kudGVzdChoLnRhZ05hbWUpKSBjb250aW51ZTsgIC8vIGl0IHNob3VsZCBiZSBhIGhlYWRlciBoMS1oNgogICAgYSA9IGguYXR0cmlidXRlczsKICAgIHdoaWxlIChhLmxlbmd0aCA+IDApIGgucmVtb3ZlQXR0cmlidXRlKGFbMF0ubmFtZSk7CiAgfQp9KTsK"></script>
+<link href="data:text/css,%0Aa%2Eanchor%2Dsection%20%7Bmargin%2Dleft%3A%2010px%3B%20visibility%3A%20hidden%3B%20color%3A%20inherit%3B%7D%0Aa%2Eanchor%2Dsection%3A%3Abefore%20%7Bcontent%3A%20%27%23%27%3B%7D%0A%2EhasAnchor%3Ahover%20a%2Eanchor%2Dsection%20%7Bvisibility%3A%20visible%3B%7D%0A" rel="stylesheet" />
+<script src="data:application/javascript;base64,Ly8gQW5jaG9yIHNlY3Rpb25zIHYxLjAgd3JpdHRlbiBieSBBdHN1c2hpIFlhc3Vtb3RvIG9uIE9jdCAzcmQsIDIwMjAuCmRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ0RPTUNvbnRlbnRMb2FkZWQnLCBmdW5jdGlvbigpIHsKICAvLyBEbyBub3RoaW5nIGlmIEFuY2hvckpTIGlzIHVzZWQKICBpZiAodHlwZW9mIHdpbmRvdy5hbmNob3JzID09PSAnb2JqZWN0JyAmJiBhbmNob3JzLmhhc093blByb3BlcnR5KCdoYXNBbmNob3JKU0xpbmsnKSkgewogICAgcmV0dXJuOwogIH0KCiAgY29uc3QgaCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJ2gxLCBoMiwgaDMsIGg0LCBoNSwgaDYnKTsKCiAgLy8gRG8gbm90aGluZyBpZiBzZWN0aW9ucyBhcmUgYWxyZWFkeSBhbmNob3JlZAogIGlmIChBcnJheS5mcm9tKGgpLnNvbWUoeCA9PiB4LmNsYXNzTGlzdC5jb250YWlucygnaGFzQW5jaG9yJykpKSB7CiAgICByZXR1cm4gbnVsbDsKICB9CgogIC8vIFVzZSBzZWN0aW9uIGlkIHdoZW4gcGFuZG9jIHJ1bnMgd2l0aCAtLXNlY3Rpb24tZGl2cwogIGNvbnN0IHNlY3Rpb25faWQgPSBmdW5jdGlvbih4KSB7CiAgICByZXR1cm4gKCh4LmNsYXNzTGlzdC5jb250YWlucygnc2VjdGlvbicpIHx8ICh4LnRhZ05hbWUgPT09ICdTRUNUSU9OJykpCiAgICAgICAgICAgID8geC5pZCA6ICcnKTsKICB9OwoKICAvLyBBZGQgYW5jaG9ycwogIGguZm9yRWFjaChmdW5jdGlvbih4KSB7CiAgICBjb25zdCBpZCA9IHguaWQgfHwgc2VjdGlvbl9pZCh4LnBhcmVudEVsZW1lbnQpOwogICAgaWYgKGlkID09PSAnJykgewogICAgICByZXR1cm4gbnVsbDsKICAgIH0KICAgIGxldCBhbmNob3IgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdhJyk7CiAgICBhbmNob3IuaHJlZiA9ICcjJyArIGlkOwogICAgYW5jaG9yLmNsYXNzTGlzdCA9IFsnYW5jaG9yLXNlY3Rpb24nXTsKICAgIHguY2xhc3NMaXN0LmFkZCgnaGFzQW5jaG9yJyk7CiAgICB4LmFwcGVuZENoaWxkKGFuY2hvcik7CiAgfSk7Cn0pOwo="></script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -82,19 +30,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-code.sourceCode > span { display: inline-block; line-height: 1.25; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-code.sourceCode > span:empty { height: 1.2em; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -114,7 +62,7 @@ pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-le
 div.sourceCode
   {   }
 @media screen {
-code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -171,187 +119,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<style type="text/css">body {
-background-color: #fff;
-margin: 1em auto;
-max-width: 700px;
-overflow: visible;
-padding-left: 2em;
-padding-right: 2em;
-font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-font-size: 14px;
-line-height: 1.35;
-}
-#TOC {
-clear: both;
-margin: 0 0 10px 10px;
-padding: 4px;
-width: 400px;
-border: 1px solid #CCCCCC;
-border-radius: 5px;
-background-color: #f6f6f6;
-font-size: 13px;
-line-height: 1.3;
-}
-#TOC .toctitle {
-font-weight: bold;
-font-size: 15px;
-margin-left: 5px;
-}
-#TOC ul {
-padding-left: 40px;
-margin-left: -1.5em;
-margin-top: 5px;
-margin-bottom: 5px;
-}
-#TOC ul ul {
-margin-left: -2em;
-}
-#TOC li {
-line-height: 16px;
-}
-table {
-margin: 1em auto;
-border-width: 1px;
-border-color: #DDDDDD;
-border-style: outset;
-border-collapse: collapse;
-}
-table th {
-border-width: 2px;
-padding: 5px;
-border-style: inset;
-}
-table td {
-border-width: 1px;
-border-style: inset;
-line-height: 18px;
-padding: 5px 5px;
-}
-table, table th, table td {
-border-left-style: none;
-border-right-style: none;
-}
-table thead, table tr.even {
-background-color: #f7f7f7;
-}
-p {
-margin: 0.5em 0;
-}
-blockquote {
-background-color: #f6f6f6;
-padding: 0.25em 0.75em;
-}
-hr {
-border-style: solid;
-border: none;
-border-top: 1px solid #777;
-margin: 28px 0;
-}
-dl {
-margin-left: 0;
-}
-dl dd {
-margin-bottom: 13px;
-margin-left: 13px;
-}
-dl dt {
-font-weight: bold;
-}
-ul {
-margin-top: 0;
-}
-ul li {
-list-style: circle outside;
-}
-ul ul {
-margin-bottom: 0;
-}
-pre, code {
-background-color: #f7f7f7;
-border-radius: 3px;
-color: #333;
-white-space: pre-wrap; 
-}
-pre {
-border-radius: 3px;
-margin: 5px 0px 10px 0px;
-padding: 10px;
-}
-pre:not([class]) {
-background-color: #f7f7f7;
-}
-code {
-font-family: Consolas, Monaco, 'Courier New', monospace;
-font-size: 85%;
-}
-p > code, li > code {
-padding: 2px 0px;
-}
-div.figure {
-text-align: center;
-}
-img {
-background-color: #FFFFFF;
-padding: 2px;
-border: 1px solid #DDDDDD;
-border-radius: 3px;
-border: 1px solid #CCCCCC;
-margin: 0 5px;
-}
-h1 {
-margin-top: 0;
-font-size: 35px;
-line-height: 40px;
-}
-h2 {
-border-bottom: 4px solid #f7f7f7;
-padding-top: 10px;
-padding-bottom: 2px;
-font-size: 145%;
-}
-h3 {
-border-bottom: 2px solid #f7f7f7;
-padding-top: 10px;
-font-size: 120%;
-}
-h4 {
-border-bottom: 1px solid #f7f7f7;
-margin-left: 8px;
-font-size: 105%;
-}
-h5, h6 {
-border-bottom: 1px solid #ccc;
-font-size: 105%;
-}
-a {
-color: #0033dd;
-text-decoration: none;
-}
-a:hover {
-color: #6666ff; }
-a:visited {
-color: #800080; }
-a:visited:hover {
-color: #BB00BB; }
-a[href^="http:"] {
-text-decoration: underline; }
-a[href^="https:"] {
-text-decoration: underline; }
-
-code > span.kw { color: #555; font-weight: bold; } 
-code > span.dt { color: #902000; } 
-code > span.dv { color: #40a070; } 
-code > span.bn { color: #d14; } 
-code > span.fl { color: #d14; } 
-code > span.ch { color: #d14; } 
-code > span.st { color: #d14; } 
-code > span.co { color: #888888; font-style: italic; } 
-code > span.ot { color: #007020; } 
-code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; } 
-code > span.er { color: #a61717; background-color: #e3d2d2; } 
-</style>
+<link rel="stylesheet" href="data:text/css,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" type="text/css" />
 
 
 
@@ -418,27 +186,28 @@ u_t^{*}
 \]</span> where <span class="math inline">\(\lambda\)</span> is the frequency of the cycle and <span class="math inline">\(\phi_c \in{(0,1)}\)</span> to make the cycle stationary for forecasting purposes, or the ARMA(2,1) process</p>
 <p><span class="math display">\[
 \begin{bmatrix}
-c_t \\
-c_{t-1} \\
-e_t
+c_t \\ c_{t-1} \\ \vdots \\ c_{t-p+2} \\ c_{t-p+1} \\ e_t \\ e_{t-1} \\ \vdots \\ e_{t-q+2} \\ e_{t-q+1}
 \end{bmatrix} = 
 \begin{bmatrix}
-\phi_{c,1} &amp; \phi_{c,2} &amp; \theta_{c,1} \\
-1 &amp; 0 &amp; 0 \\
-0 &amp; 0 &amp; 0
+\phi_{c,1} &amp; \phi_{c,2} &amp; \ldots &amp; \phi_{c,p-1} &amp; \phi_{c,p} &amp; \theta_{c,1} &amp; \theta_{c,2} &amp; \ldots &amp; \theta_{c,q-1} &amp; \theta_{c,q} \\
+1 &amp; 0 &amp; \ldots &amp; 0 &amp; 0 &amp; \ldots &amp; \ldots &amp; \ldots &amp; \ldots &amp; 0 \\
+0 &amp; \ddots &amp;  &amp; \vdots &amp; \vdots &amp; \ddots &amp;  &amp; \ddots &amp;  &amp;  \vdots \\
+\vdots &amp;  &amp; \ddots &amp; \vdots &amp; \vdots &amp;  &amp; \ddots&amp; &amp; \ddots &amp; \vdots \\
+0 &amp; \ldots &amp; \dots &amp; 1 &amp; 0 &amp; \ldots &amp; \ldots &amp; \ldots &amp; \dots &amp; 0 \\
+0 &amp; \ldots &amp; \ldots &amp; \ldots &amp; 0 &amp; \ldots &amp; \ldots &amp; \ldots &amp; \ldots &amp; 0 \\
+\vdots &amp; \ddots &amp;  &amp;  &amp; \vdots &amp; 1 &amp; 0 &amp; \ldots &amp; 0 &amp; \vdots \\
+\vdots &amp;  &amp; \ddots &amp;  &amp; \vdots &amp; 0 &amp; \ddots &amp;  &amp; \vdots &amp; \vdots \\
+\vdots &amp;  &amp;  &amp; \ddots &amp; \vdots &amp; \vdots &amp;  &amp; \ddots &amp; \vdots &amp; \vdots \\
+0 &amp; \ldots &amp; \ldots &amp; \ldots &amp; 0 &amp; 0 &amp; \ldots &amp; \ldots &amp; 1 &amp; 0\\
 \end{bmatrix}
 \begin{bmatrix}
-c_{t-1} \\
-c_{t-2} \\
-e_{t-1}
+c_{t-1} \\ c_{t-2} \\ \vdots \\ c_{t-p+1} \\ c_{t-p} \\ e_{t-1} \\ e_{t-2} \\ \vdots \\ e_{t-q+1} \\e_{t-q}
 \end{bmatrix} + 
 \begin{bmatrix}
-e_t \\
-0 \\
-e_t
+e_t \\ 0 \\ \vdots \\ \vdots \\ 0 \\ e_t \\ 0 \\ \vdots \\ \vdots \\0
 \end{bmatrix}, 
 e_t \sim N(0, \sigma_c^2)
-\]</span> Th ARMA(2,1) specification can have real or complex roots, while the trigonometric specification will only have complex roots. The trigonometric specification is a special case of the ARMA(2,1) specification if it exists but was not detected by wavelet analysis.</p>
+\]</span> where <span class="math inline">\(p\)</span> is the autoregressive lag length and <span class="math inline">\(q\)</span> is the moving average lag length. The ARMA(p,q) specification can have real or complex roots, while the trigonometric specification will only have complex roots. The trigonometric specification is a special case of an ARMA(2,1) specification.</p>
 <p>If the roots are complex, the dynamics will be damped oscillations about the trend, which may not always be desirable. If the user would like to remove oscillations from the forecast that are caused by the complex roots, the user can specify, <code>dampen_cycle = TRUE</code> in <code>stsm_forecast</code>. This option will smooth the forecast of the cycle into the trend using a fitted sigmoid curve.</p>
 </div>
 <div id="seasonal-model" class="section level2">
@@ -484,45 +253,45 @@ w_t^{j,*}
 </div>
 <div id="seasonal-and-cycle-adjustment" class="section level3">
 <h3>Seasonal and Cycle Adjustment</h3>
-<p>Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The <code>loess</code> function in the <code>stats</code> package requires that there are no missing values in the data, so any missing values are computed with the <code>na_kalman</code> function from the <code>imputeTS</code> package. If you know the missing data pattern in your data (i.e missing data should be 0), it’s best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the <code>smooth.spline</code> function of the <code>stats</code> package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by first decomposing the seasonal-cycle using the <code>stl</code> function from the <code>stats</code> package then regressing the seasonal component on a Fourier series composed of the seasonal periods.</p>
-</div>
-<div id="multiplicative-vs-additive-detection" class="section level3">
-<h3>Multiplicative vs Additive Detection</h3>
-<p>The second step is to determine if the model should be based on a multiplicative of additive model. For a multiplicative model, the data must all be positive and satisfy one of two tests. The model is restricted to multiplicative of additive decomposition, rather than allowing the full range of Box-Cox transformations, so that the decomposition is easy to compare to the original time series. Additive makes the decomposition comparative in levels, multiplicative makes the decomposition comparative in percentages relative to the original time series, but Box-Cox transformations don’t have an easy interpretation like this. However, the user can Box-Cox transform the data prior to estimation and specify <code>multilicative = FALSE</code> if that method is preferred.</p>
-<div id="trend-test" class="section level4">
-<h4>Trend Test</h4>
-<p>The first test is a test of a linear vs exponential trend. This test compares the log likelihood of 1) a linear regression of the seasonal and cycle adjusted data vs a linear trend, and 2) a linear regression of the logged seasonal and cycle adjusted data vs a linear trend using the <code>petest</code> from the <code>lmtest</code> package. A log trend model is selected if and only if the linear model is rejected and the log model is not rejected.</p>
-</div>
-<div id="seasonal-cycle-amplitude-test" class="section level4">
-<h4>Seasonal-Cycle Amplitude Test</h4>
-<p>The second test is a test for constant seasonal-cycle amplitude using the Cox-Stuart dispersion test from the <code>tsutils</code> package (using the <code>coxstuart</code> function) on the detrended data. Then, if the seasonal component is determined to have changing amplitude, a multiplicative model is used. However, since this test is sensitive to outliers, outliers in the seasonal-cycle series are detected and replaced using the <code>forecast</code>’s package <code>tsoutliers</code> function before the test is performed.</p>
-</div>
+<p>Before any of the model specification tests can be performed, the data must be seasonally and cycle adjusted. This procedure is performed by decomposing the time series into a loess trend and a seasonal-cycle remainder. The <code>loess</code> function in the <code>stats</code> package requires that there are no missing values in the data, so any missing values are computed using the Kalman filter with a local trend using the <code>stats</code> package’s <code>StructTS</code> and <code>KalmanSmooth</code> functions. If you know the missing data pattern in your data (i.e missing data should be 0), it’s best to fill in the missing data using your knowledge before allowing this method to fill in the rest. A smoother cycle is also estimated from the seasonal-cycle component using a smoothing spline from the <code>smooth.spline</code> function of the <code>stats</code> package. Once the seasonal and cycle periods are known, the seasonal-cycle is more accurately decomposed into the seasonal and cycle components by first decomposing the seasonal-cycle using the <code>mstl</code> function from the <code>forecast</code> package then regressing the seasonal component on a Fourier series composed of the seasonal periods.</p>
 </div>
 <div id="seasonality-detection" class="section level3">
 <h3>Seasonality Detection</h3>
-<p>The second step is wavelet analysis for seasonal detection, which is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each seasonal harmonic using the equation</p>
+<p>The first step is wavelet analysis for seasonal detection, which is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart deviation test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each seasonal harmonic using the equation</p>
 <p><span class="math display">\[
 \tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
 \]</span></p>
 <p>for harmonics <span class="math inline">\(j\)</span> that correspond to the spectrum of minutely, hourly, workday hours, half daily, daily, weekend, weekday, weekly, monthly, quarterly, semi-yearly, and yearly seasonal frequencies where applicable. However, since this limits the number of frequencies tested, a linear space of 100 items is created between each harmonic so that the space captures 1% of the distance between the original two harmonics. If a nonstandard frequency is detected, the harmonics are set to <span class="math inline">\(j = \lfloor \frac{f}{2} \rfloor\)</span>, but only taking 1000 equally spaced harmonics for harmonics that have at least 3 cycles in the data. This strategy limits the number of harmonics tested for speed, while also trying to capture some a priori important seasonalities based on the frequency of the data.</p>
-<p>At each iteration, an F-test is performed to measure the significance of the harmonic in explaining the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. The frequencies (defined as <span class="math inline">\(\frac{f}{j}\)</span>) are then matched to the spectrum of seasonalities that correspond to the a priori important seasonal spectrum if the frequency of the harmonic is within one delta of the frequency of this predefined spectrum. This delta is equal to the unique difference between the frequencies of the harmonics.</p>
+<p>At each iteration, an F-test is performed using the <code>waldtest</code> function from the <code>lmtest</code> package to measure the significance of the harmonic in explaining the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. The frequencies (defined as <span class="math inline">\(\frac{f}{j}\)</span>) are then matched to the spectrum of seasonalities that correspond to the a priori important seasonal spectrum if the frequency of the harmonic is within one delta of the frequency of this predefined spectrum. This delta is equal to the unique difference between the frequencies of the harmonics.</p>
 <p>Lastly, backward stepwise regression procedure using an F-test for the significance of each seasonality (i.e. joint significance of <span class="math inline">\(a_j\)</span> and <span class="math inline">\(b_j\)</span> is used to build the final seasonality specification starting with only the harmonics that were statistically significant from the first step. At each stage of the of the stepwise procedure, an F-test for the statistical significance of each seasonality is performed and any harmonics that are not statistically significant are removed. The process is performed iteratively until all remaining harmonics are statistically significant. The F-tests for this procedure are calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.</p>
 </div>
 <div id="cycle-detection" class="section level3">
 <h3>Cycle Detection</h3>
-<p>Next, wavelet analysis for cycle detection is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart dispersion test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each harmonic using the equation</p>
+<p>Next, wavelet analysis for cycle detection is done using a series of harmonic regressions in parallel on the detrended data. The detrended data may also be rescaled by the trend if the Cox-Stuart deviation test suggests that the detrended data does not have a constant amplitude. The regression is performed individually for each harmonic using the equation</p>
 <p><span class="math display">\[
 \tilde{y_t} = a_j sin(2\pi\frac{j}{f}) + b_j cos(2\pi\frac{j}{f})
 \]</span></p>
 <p>for harmonics <span class="math inline">\(j = 0.01\)</span> to <span class="math inline">\(j = 0.99\)</span> for every 0.01 and truncated for harmonics that correspond to periods <span class="math inline">\(\in [ 2.5f, T]\)</span> and harmonics &lt; <span class="math inline">\(1/2\)</span> where <span class="math inline">\(T\)</span> is the length of the data.</p>
-<p>At each iteration, an F-test is performed to measure the significance of the harmonic to explain the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. Once all harmonics have been tested, the algorithm looks for a global maximum from the power spectrum measured with the F-statistic that is statistically significant.</p>
+<p>At each iteration, an F-test is performed using the <code>waldtest</code> function from the <code>lmtest</code> package to measure the significance of the harmonic to explain the seasonality, understanding that this will not be robust to heteroskedasticity or autocorrelation. This accuracy is sacrificed for speed at this step. Once all harmonics have been tested, the algorithm looks for a global maximum from the power spectrum measured with the F-statistic that is statistically significant.</p>
 <p>Lastly, a final regression is performed with only the harmonic that was selected from the first step. From this regression, the harmonic is kept only if the cycle is statistically significant (i.e. <span class="math inline">\(a_j\)</span> and <span class="math inline">\(b_j\)</span> are jointly significant) as measured by the F-test for the final harmonic regression. The F-test for this step is calculated using HAC standard errors to be robust to heteroskedasticity and autocorrelation to reduce the chance of selecting spurious seasonalities.</p>
-<p>The cycle is set to the trigonometric form if a cycle is detected using wavelet analysis. Otherwise, it is set to the ARMA specification.</p>
+<p>The cycle is set to the trigonometric form if a cycle is detected using wavelet analysis. Otherwise, it is set to the ARMA(p,q) specification.</p>
+</div>
+<div id="multiplicative-vs-additive-detection" class="section level3">
+<h3>Multiplicative vs Additive Detection</h3>
+<p>The third step in the model construction is to determine if the model should be based on a multiplicative of additive model. However, after the seasonal and cycle steps are completed, a new model prior is created based on the seasonal and cycle periods detected. For a multiplicative model, the data must all be positive and satisfy one of two tests. The model is restricted to multiplicative of additive decomposition, rather than allowing the full range of Box-Cox transformations, so that the decomposition is easy to compare to the original time series. Additive makes the decomposition comparative in levels, multiplicative makes the decomposition comparative in percentages relative to the original time series, but Box-Cox transformations don’t have an easy interpretation like this. However, the user can Box-Cox transform the data prior to estimation and specify <code>multilicative = FALSE</code> if that method is preferred.</p>
+<div id="trend-test" class="section level4">
+<h4>Trend Test</h4>
+<p>First, is a test of a linear vs exponential trend. This test compares the log likelihood of 1) a linear regression of the seasonal and cycle adjusted data vs a linear trend, and 2) a linear regression of the logged seasonal and cycle adjusted data vs a linear trend using the <code>petest</code> from the <code>lmtest</code> package with heteroskedastic and autocorrelated standard errors using the <code>sandwich</code> package’s <code>vcovHAC</code> function. A log trend model is selected if and only if the linear model is rejected and the log model is not rejected.</p>
+</div>
+<div id="seasonal-cycle-amplitude-test" class="section level4">
+<h4>Seasonal-Cycle Amplitude Test</h4>
+<p>Next, is a test for constant seasonal and cycle amplitudes using the Cox-Stuart deviation test on the detrended (and de-seasonalized or de-cycled) data. Then, if the seasonal component is determined to have changing amplitude, a multiplicative model is used. However, since this test is sensitive to outliers, outliers in the seasonal and cycle series are detected and replaced using the <code>forecast</code>’s package <code>tsclean</code> function without replacing missing values before the test is performed.</p>
+</div>
 </div>
 <div id="trend-detection" class="section level3">
 <h3>Trend Detection</h3>
-<p>The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the <code>forecast</code> package’s <code>ndiffs</code> functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the <code>forecast</code>’s package <code>tsoutliers</code> function before the test is performed.</p>
-<p>The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test from the <code>tsutils</code> package is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1.</p>
+<p>The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the <code>forecast</code> package’s <code>ndiffs</code> functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the <code>forecast</code>’s package <code>tsclean</code> function without replacing missing values before the test is performed.</p>
+<p>The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1.</p>
 <p>If the data is determined to be</p>
 <ul>
 <li>I(2), then the “double-random-walk” specification is used</li>
@@ -594,11 +363,11 @@ ln(L(\theta)) = -\frac{1}{2} \sum_{t=1}^T \ln(|f_{t|t-1}|) - \frac{1}{2}\sum_{t=
 <h2>Initial Parameter Values</h2>
 <div id="model-prior" class="section level3">
 <h3>Model Prior</h3>
-<p>Initial parameter values are essential for finding a good model when using maximum likelihood estimation. To this end, the algorithm uses initial parameter values derived from a decomposition using the <code>stl</code> function, which acts like the model prior and is represented by</p>
+<p>Initial parameter values are essential for finding a good model when using maximum likelihood estimation. To this end, the algorithm uses initial parameter values derived from a decomposition using the <code>mstl</code> function, which acts like the model prior and is represented by</p>
 <p><span class="math display">\[
 Y_t^* = T_t^* + C_t^* + S_t^* + e_t^*
 \]</span></p>
-<p>This function will decompose the time series into trend and seasonality. The seasonality is then further split into the seasonal harmonics by fitted a linear regression on the seasonal Fourier series and extracting the fitted components. Finally, the trend is further split into a smoother trend and the cycle by fitting a loess trend to the <code>stl</code> trend using the <code>loess</code> function. The drift is then derived by taking the first difference of the trend.</p>
+<p>This function will decompose the time series into trend and seasonality. The seasonality is then further split into the seasonal harmonics by fitted a linear regression on the seasonal Fourier series and extracting the fitted components. Finally, the trend is further split into a smoother trend and the cycle by fitting a loess trend to the <code>mstl</code> trend using the <code>loess</code> function. The drift is then derived by taking the first difference of the trend.</p>
 </div>
 <div id="trend-and-drift-initial-values" class="section level3">
 <h3>Trend and Drift Initial Values</h3>
@@ -606,7 +375,7 @@ Y_t^* = T_t^* + C_t^* + S_t^* + e_t^*
 </div>
 <div id="cycle-initial-values" class="section level3">
 <h3>Cycle Initial Values</h3>
-<p>If the cycle model is set to the ARMA specification or a cycle is not detected, an ARMA(2, 0, 1) process is fit to the cycle prior to set the parameters for the cycle component. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, <span class="math inline">\(\lambda\)</span> is set to be <span class="math inline">\(\frac{2\pi}{c}\)</span> where <span class="math inline">\(c\)</span> is the estimated cycle period. <span class="math inline">\(\phi_c\)</span> is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as <span class="math inline">\(\phi_c\)</span> is in a AR(1) process. Finally, <span class="math inline">\(\sigma_c\)</span> is set to the standard deviation of the model errors.</p>
+<p>If the cycle model is set to the ARMA(p,q) specification or a cycle is not detected, <span class="math inline">\(p\)</span> and <span class="math inline">\(q\)</span> are determined using the <code>forecast</code> package’s <code>auto.arima</code> function on the prior cycle. The estimated AR and MA components are then used as the initial parameters. If the cycle is model is set to the trigonometric specification, <span class="math inline">\(\lambda\)</span> is set to be <span class="math inline">\(\frac{2\pi}{c}\)</span> where <span class="math inline">\(c\)</span> is the estimated cycle period. <span class="math inline">\(\phi_c\)</span> is set to the maximum eigenvalue of an ARMA(2,0,1) process fit to the cycle prior as this is related to the speed of convergence towards the trend as <span class="math inline">\(\phi_c\)</span> is in an AR(1) process. Finally, <span class="math inline">\(\sigma_c\)</span> is set to the standard deviation of the model errors.</p>
 </div>
 <div id="seasonality-initial-values" class="section level3">
 <h3>Seasonality Initial Values</h3>
@@ -622,7 +391,7 @@ Y_t^* = T_t^* + C_t^* + S_t^* + e_t^*
 </div>
 <div id="box-constraints" class="section level3">
 <h3>Box Constraints</h3>
-<p>The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include startionarity constraints for the cycle, <span class="math inline">\(0 &lt; \phi_c &lt; 1\)</span> and drift, <span class="math inline">\(-1 &lt; \phi &lt; 1\)</span>, as well as <span class="math inline">\(\sigma_x &gt; 0\)</span> for all variance parameters. Trend smoothness constraints</p>
+<p>The box constraints act like priors and provide bounds on parameter estimates to ensure a reasonable model. The constraints include stationarity constraints for the trigonometric cycle, <span class="math inline">\(0 &lt; \phi_c &lt; 1\)</span>, autoregressive cycle <span class="math inline">\(0 &lt; \sum \phi_{c,i} &lt; 1\)</span>, moving average component <span class="math inline">\(0 &lt; \sum \theta_{c,i} &lt; 1\)</span>, drift <span class="math inline">\(-1 &lt; \phi_d &lt; 1\)</span>, as well as <span class="math inline">\(\sigma_x &gt; 0\)</span> for all variance parameters. Trend smoothness constraints</p>
 <p><span class="math display">\[
 \sigma_t + \sigma_d &lt; \sigma_e \\
 \sigma_t + \sigma_d &lt; \sigma_c \\
@@ -658,169 +427,169 @@ FEV = \left(\sum_{i=0}^{j-1} H F^i Q F^{i\prime} H^{\prime}\right) + R
 <p>Below is an example of how to use this package:</p>
 <div id="case-1-sample-data-example" class="section level2">
 <h2>Case 1: Sample Data Example</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(ggplot2)</span>
-<span id="cb1-2"><a href="#cb1-2"></a><span class="kw">library</span>(gridExtra)</span>
-<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">library</span>(autostsm)</span>
-<span id="cb1-4"><a href="#cb1-4"></a></span>
-<span id="cb1-5"><a href="#cb1-5"></a><span class="kw">set.seed</span>(<span class="dv">1024</span>)</span>
-<span id="cb1-6"><a href="#cb1-6"></a></span>
-<span id="cb1-7"><a href="#cb1-7"></a><span class="co">#Daily data</span></span>
-<span id="cb1-8"><a href="#cb1-8"></a>freq =<span class="st"> </span><span class="fl">365.25</span></span>
-<span id="cb1-9"><a href="#cb1-9"></a></span>
-<span id="cb1-10"><a href="#cb1-10"></a><span class="co">#Build the trend and drift</span></span>
-<span id="cb1-11"><a href="#cb1-11"></a>t =<span class="st"> </span><span class="kw">c</span>()</span>
-<span id="cb1-12"><a href="#cb1-12"></a>m =<span class="st"> </span><span class="kw">c</span>()</span>
-<span id="cb1-13"><a href="#cb1-13"></a>t[<span class="dv">1</span>] =<span class="st"> </span><span class="dv">100</span></span>
-<span id="cb1-14"><a href="#cb1-14"></a>m[<span class="dv">1</span>] =<span class="st"> </span><span class="dv">1</span></span>
-<span id="cb1-15"><a href="#cb1-15"></a>sig_e =<span class="st"> </span><span class="fl">0.1</span></span>
-<span id="cb1-16"><a href="#cb1-16"></a>sig_t =<span class="st"> </span><span class="dv">1</span></span>
-<span id="cb1-17"><a href="#cb1-17"></a>sig_m =<span class="st"> </span><span class="fl">0.1</span></span>
-<span id="cb1-18"><a href="#cb1-18"></a>sig_s =<span class="st"> </span><span class="fl">0.01</span></span>
-<span id="cb1-19"><a href="#cb1-19"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">2</span><span class="op">:</span><span class="dv">3000</span>){</span>
-<span id="cb1-20"><a href="#cb1-20"></a>  m[i] =<span class="st"> </span><span class="fl">0.05</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.75</span><span class="op">*</span>m[i<span class="dv">-1</span>] <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">1</span>, <span class="dv">0</span>, sig_m)</span>
-<span id="cb1-21"><a href="#cb1-21"></a>  t[i] =<span class="st"> </span>t[i<span class="dv">-1</span>] <span class="op">+</span><span class="st"> </span>m[i<span class="dv">-1</span>] <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">1</span>, <span class="dv">0</span>, sig_t)</span>
-<span id="cb1-22"><a href="#cb1-22"></a>}</span>
-<span id="cb1-23"><a href="#cb1-23"></a></span>
-<span id="cb1-24"><a href="#cb1-24"></a><span class="co">#Build the seasonality including yearly and weekly </span></span>
-<span id="cb1-25"><a href="#cb1-25"></a>s365 =<span class="st"> </span><span class="kw">sin</span>(<span class="dv">2</span><span class="op">*</span>pi<span class="op">/</span>freq<span class="op">*</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(t))) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">length</span>(t), <span class="dv">0</span>, sig_s)</span>
-<span id="cb1-26"><a href="#cb1-26"></a>s365 =<span class="st"> </span>(s365 <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(s365))<span class="op">/</span><span class="kw">diff</span>(<span class="kw">range</span>(s365))<span class="op">*</span>(<span class="fl">1.125</span> <span class="op">-</span><span class="st"> </span><span class="fl">0.865</span>) <span class="op">+</span><span class="st"> </span><span class="fl">0.865</span></span>
-<span id="cb1-27"><a href="#cb1-27"></a>s7 =<span class="st"> </span><span class="kw">sin</span>(<span class="dv">2</span><span class="op">*</span>pi<span class="op">/</span><span class="dv">7</span><span class="op">*</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(t))) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">length</span>(t), <span class="dv">0</span>, sig_s)</span>
-<span id="cb1-28"><a href="#cb1-28"></a>s7 =<span class="st"> </span>(s7 <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(s7))<span class="op">/</span><span class="kw">diff</span>(<span class="kw">range</span>(s7))<span class="op">*</span>(<span class="fl">1.125</span> <span class="op">-</span><span class="st"> </span><span class="fl">0.865</span>) <span class="op">+</span><span class="st"> </span><span class="fl">0.865</span></span>
-<span id="cb1-29"><a href="#cb1-29"></a>s =<span class="st"> </span>s365 <span class="op">+</span><span class="st"> </span>s7</span>
-<span id="cb1-30"><a href="#cb1-30"></a>s =<span class="st"> </span>(s <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(s))<span class="op">/</span><span class="kw">diff</span>(<span class="kw">range</span>(s))<span class="op">*</span>(<span class="fl">1.25</span> <span class="op">-</span><span class="st"> </span><span class="fl">0.75</span>) <span class="op">+</span><span class="st"> </span><span class="fl">0.75</span></span>
-<span id="cb1-31"><a href="#cb1-31"></a></span>
-<span id="cb1-32"><a href="#cb1-32"></a><span class="co">#Build the cyclicality using every 3 years periodicity</span></span>
-<span id="cb1-33"><a href="#cb1-33"></a>c =<span class="st"> </span><span class="kw">sin</span>(<span class="dv">2</span><span class="op">*</span>pi<span class="op">*</span><span class="fl">0.33</span><span class="op">/</span>freq<span class="op">*</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(t))) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">length</span>(t), <span class="dv">0</span>, sig_s)</span>
-<span id="cb1-34"><a href="#cb1-34"></a>c =<span class="st"> </span>(c <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(c))<span class="op">/</span><span class="kw">diff</span>(<span class="kw">range</span>(c))<span class="op">*</span>(<span class="fl">1.25</span> <span class="op">-</span><span class="st"> </span><span class="fl">0.75</span>) <span class="op">+</span><span class="st"> </span><span class="fl">0.75</span></span>
-<span id="cb1-35"><a href="#cb1-35"></a></span>
-<span id="cb1-36"><a href="#cb1-36"></a><span class="co">#Build the data using a multiplicative model</span></span>
-<span id="cb1-37"><a href="#cb1-37"></a>ts =<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">date =</span> <span class="kw">as.Date</span>(<span class="st">&quot;2016-01-01&quot;</span>) <span class="op">+</span><span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(t), </span>
-<span id="cb1-38"><a href="#cb1-38"></a>                <span class="dt">y =</span> t<span class="op">*</span>c<span class="op">*</span>s<span class="op">*</span><span class="kw">exp</span>(<span class="kw">rnorm</span>(<span class="kw">length</span>(t), <span class="dv">0</span>, sig_e)), </span>
-<span id="cb1-39"><a href="#cb1-39"></a>                <span class="dt">trend =</span> t, <span class="dt">seasonal =</span> s, <span class="dt">seasonal7 =</span> s7, </span>
-<span id="cb1-40"><a href="#cb1-40"></a>                <span class="dt">seasonal365 =</span> s365, <span class="dt">cycle =</span> c)</span>
-<span id="cb1-41"><a href="#cb1-41"></a></span>
-<span id="cb1-42"><a href="#cb1-42"></a><span class="co">#Create some missing values</span></span>
-<span id="cb1-43"><a href="#cb1-43"></a>ts[<span class="kw">sample</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(ts), <span class="kw">round</span>(<span class="fl">0.05</span><span class="op">*</span><span class="kw">nrow</span>(ts))), <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="ot">NA</span>]</span>
-<span id="cb1-44"><a href="#cb1-44"></a></span>
-<span id="cb1-45"><a href="#cb1-45"></a><span class="co">#View the data</span></span>
-<span id="cb1-46"><a href="#cb1-46"></a>g1 =<span class="st"> </span><span class="kw">ggplot</span>(<span class="kw">melt</span>(ts, <span class="dt">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">measure.vars =</span> <span class="kw">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;trend&quot;</span>))) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-47"><a href="#cb1-47"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Observed vs Trend&quot;</span>) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-48"><a href="#cb1-48"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date, <span class="dt">y =</span> value, <span class="dt">group =</span> variable, <span class="dt">color =</span> variable)) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-49"><a href="#cb1-49"></a><span class="st">  </span><span class="kw">scale_color_viridis_d</span>() <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-50"><a href="#cb1-50"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span><span class="st"> </span><span class="kw">guides</span>(<span class="dt">color =</span> <span class="kw">guide_legend</span>(<span class="dt">title =</span> <span class="ot">NULL</span>)) <span class="op">+</span></span>
-<span id="cb1-51"><a href="#cb1-51"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
-<span id="cb1-52"><a href="#cb1-52"></a>g2 =<span class="st"> </span><span class="kw">ggplot</span>(<span class="kw">melt</span>(ts, <span class="dt">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">measure.vars =</span> <span class="kw">c</span>(<span class="st">&quot;cycle&quot;</span>))) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-53"><a href="#cb1-53"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Cycle&quot;</span>) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-54"><a href="#cb1-54"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date, <span class="dt">y =</span> value, <span class="dt">group =</span> variable, <span class="dt">color =</span> variable)) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-55"><a href="#cb1-55"></a><span class="st">  </span><span class="kw">scale_color_viridis_d</span>() <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-56"><a href="#cb1-56"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span><span class="st"> </span><span class="kw">guides</span>(<span class="dt">color =</span> <span class="kw">guide_legend</span>(<span class="dt">title =</span> <span class="ot">NULL</span>)) <span class="op">+</span></span>
-<span id="cb1-57"><a href="#cb1-57"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
-<span id="cb1-58"><a href="#cb1-58"></a>g3 =<span class="st"> </span><span class="kw">ggplot</span>(<span class="kw">melt</span>(ts, <span class="dt">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">measure.vars =</span> <span class="kw">colnames</span>(ts)[<span class="kw">grepl</span>(<span class="st">&quot;seasonal&quot;</span>, <span class="kw">colnames</span>(ts))])) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-59"><a href="#cb1-59"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Seasonal&quot;</span>) <span class="op">+</span></span>
-<span id="cb1-60"><a href="#cb1-60"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date, <span class="dt">y =</span> value, <span class="dt">group =</span> variable, <span class="dt">color =</span> variable)) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-61"><a href="#cb1-61"></a><span class="st">  </span><span class="kw">scale_color_viridis_d</span>() <span class="op">+</span><span class="st"> </span></span>
-<span id="cb1-62"><a href="#cb1-62"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span><span class="st"> </span><span class="kw">guides</span>(<span class="dt">color =</span> <span class="kw">guide_legend</span>(<span class="dt">title =</span> <span class="ot">NULL</span>)) <span class="op">+</span></span>
-<span id="cb1-63"><a href="#cb1-63"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
-<span id="cb1-64"><a href="#cb1-64"></a><span class="kw">grid.arrange</span>(g1, g2, g3, <span class="dt">layout_matrix =</span> <span class="kw">rbind</span>(<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">3</span>)))</span>
-<span id="cb1-65"><a href="#cb1-65"></a></span>
-<span id="cb1-66"><a href="#cb1-66"></a><span class="co">#Estimate the model</span></span>
-<span id="cb1-67"><a href="#cb1-67"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb1-68"><a href="#cb1-68"></a></span>
-<span id="cb1-69"><a href="#cb1-69"></a><span class="co">#Forecast and plot the results</span></span>
-<span id="cb1-70"><a href="#cb1-70"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb1-71"><a href="#cb1-71"></a></span>
-<span id="cb1-72"><a href="#cb1-72"></a><span class="co">#Detect anomalies</span></span>
-<span id="cb1-73"><a href="#cb1-73"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb1-74"><a href="#cb1-74"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb1-75"><a href="#cb1-75"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb1-76"><a href="#cb1-76"></a></span>
-<span id="cb1-77"><a href="#cb1-77"></a><span class="co">#Detect structural breaks</span></span>
-<span id="cb1-78"><a href="#cb1-78"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb1-79"><a href="#cb1-79"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> ts[, <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="dt">with =</span> <span class="ot">FALSE</span>], <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb1-80"><a href="#cb1-80"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(autostsm)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1024</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Daily data</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>freq <span class="ot">=</span> <span class="fl">365.25</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#Build the trend and drift</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>t <span class="ot">=</span> <span class="fu">c</span>()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>m <span class="ot">=</span> <span class="fu">c</span>()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>t[<span class="dv">1</span>] <span class="ot">=</span> <span class="dv">100</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>m[<span class="dv">1</span>] <span class="ot">=</span> <span class="dv">1</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>sig_e <span class="ot">=</span> <span class="fl">0.1</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>sig_t <span class="ot">=</span> <span class="dv">1</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>sig_m <span class="ot">=</span> <span class="fl">0.1</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>sig_s <span class="ot">=</span> <span class="fl">0.01</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">3000</span>){</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  m[i] <span class="ot">=</span> <span class="fl">0.05</span> <span class="sc">+</span> <span class="fl">0.75</span><span class="sc">*</span>m[i<span class="dv">-1</span>] <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">1</span>, <span class="dv">0</span>, sig_m)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  t[i] <span class="ot">=</span> t[i<span class="dv">-1</span>] <span class="sc">+</span> m[i<span class="dv">-1</span>] <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">1</span>, <span class="dv">0</span>, sig_t)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">#Build the seasonality including yearly and weekly </span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>s365 <span class="ot">=</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">/</span>freq<span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(t))) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(t), <span class="dv">0</span>, sig_s)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>s365 <span class="ot">=</span> (s365 <span class="sc">-</span> <span class="fu">min</span>(s365))<span class="sc">/</span><span class="fu">diff</span>(<span class="fu">range</span>(s365))<span class="sc">*</span>(<span class="fl">1.125</span> <span class="sc">-</span> <span class="fl">0.865</span>) <span class="sc">+</span> <span class="fl">0.865</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>s7 <span class="ot">=</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">/</span><span class="dv">7</span><span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(t))) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(t), <span class="dv">0</span>, sig_s)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>s7 <span class="ot">=</span> (s7 <span class="sc">-</span> <span class="fu">min</span>(s7))<span class="sc">/</span><span class="fu">diff</span>(<span class="fu">range</span>(s7))<span class="sc">*</span>(<span class="fl">1.125</span> <span class="sc">-</span> <span class="fl">0.865</span>) <span class="sc">+</span> <span class="fl">0.865</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>s <span class="ot">=</span> s365 <span class="sc">+</span> s7</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>s <span class="ot">=</span> (s <span class="sc">-</span> <span class="fu">min</span>(s))<span class="sc">/</span><span class="fu">diff</span>(<span class="fu">range</span>(s))<span class="sc">*</span>(<span class="fl">1.25</span> <span class="sc">-</span> <span class="fl">0.75</span>) <span class="sc">+</span> <span class="fl">0.75</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">#Build the cyclicality using every 3 years periodicity</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>c <span class="ot">=</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="fl">0.33</span><span class="sc">/</span>freq<span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(t))) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(t), <span class="dv">0</span>, sig_s)</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>c <span class="ot">=</span> (c <span class="sc">-</span> <span class="fu">min</span>(c))<span class="sc">/</span><span class="fu">diff</span>(<span class="fu">range</span>(c))<span class="sc">*</span>(<span class="fl">1.25</span> <span class="sc">-</span> <span class="fl">0.75</span>) <span class="sc">+</span> <span class="fl">0.75</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co">#Build the data using a multiplicative model</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>ts <span class="ot">=</span> <span class="fu">data.table</span>(<span class="at">date =</span> <span class="fu">as.Date</span>(<span class="st">&quot;2016-01-01&quot;</span>) <span class="sc">+</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(t), </span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>                <span class="at">y =</span> t<span class="sc">*</span>c<span class="sc">*</span>s<span class="sc">*</span><span class="fu">exp</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(t), <span class="dv">0</span>, sig_e)), </span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>                <span class="at">trend =</span> t, <span class="at">seasonal =</span> s, <span class="at">seasonal7 =</span> s7, </span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>                <span class="at">seasonal365 =</span> s365, <span class="at">cycle =</span> c)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co">#Create some missing values</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>ts[<span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ts), <span class="fu">round</span>(<span class="fl">0.05</span><span class="sc">*</span><span class="fu">nrow</span>(ts))), <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="cn">NA</span>]</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co">#View the data</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>g1 <span class="ot">=</span> <span class="fu">ggplot</span>(<span class="fu">melt</span>(ts, <span class="at">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="at">measure.vars =</span> <span class="fu">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;trend&quot;</span>))) <span class="sc">+</span> </span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Observed vs Trend&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> value, <span class="at">group =</span> variable, <span class="at">color =</span> variable)) <span class="sc">+</span> </span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>() <span class="sc">+</span> </span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">guides</span>(<span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="cn">NULL</span>)) <span class="sc">+</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>g2 <span class="ot">=</span> <span class="fu">ggplot</span>(<span class="fu">melt</span>(ts, <span class="at">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="at">measure.vars =</span> <span class="fu">c</span>(<span class="st">&quot;cycle&quot;</span>))) <span class="sc">+</span> </span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Cycle&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> value, <span class="at">group =</span> variable, <span class="at">color =</span> variable)) <span class="sc">+</span> </span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>() <span class="sc">+</span> </span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">guides</span>(<span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="cn">NULL</span>)) <span class="sc">+</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>g3 <span class="ot">=</span> <span class="fu">ggplot</span>(<span class="fu">melt</span>(ts, <span class="at">id.vars =</span> <span class="st">&quot;date&quot;</span>, <span class="at">measure.vars =</span> <span class="fu">colnames</span>(ts)[<span class="fu">grepl</span>(<span class="st">&quot;seasonal&quot;</span>, <span class="fu">colnames</span>(ts))])) <span class="sc">+</span> </span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Seasonal&quot;</span>) <span class="sc">+</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> value, <span class="at">group =</span> variable, <span class="at">color =</span> variable)) <span class="sc">+</span> </span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>() <span class="sc">+</span> </span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">guides</span>(<span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="cn">NULL</span>)) <span class="sc">+</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(g1, g2, g3, <span class="at">layout_matrix =</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>), <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>)))</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="co">#Estimate the model</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="co">#Forecast and plot the results</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="co">#Detect anomalies</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a><span class="co">#Detect structural breaks</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="case-2-real-data-examples" class="section level2">
 <h2>Case 2: Real Data Examples</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">library</span>(autostsm)</span>
-<span id="cb2-2"><a href="#cb2-2"></a></span>
-<span id="cb2-3"><a href="#cb2-3"></a><span class="co">##### Unemployment rate examples #####</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a><span class="co">#Not seasonally adjusted</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a><span class="kw">data</span>(<span class="st">&quot;UNRATENSA&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a>UNRATENSA =<span class="st"> </span><span class="kw">data.table</span>(UNRATENSA, <span class="dt">keep.rownames =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-7"><a href="#cb2-7"></a><span class="kw">colnames</span>(UNRATENSA) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb2-8"><a href="#cb2-8"></a>UNRATENSA[, <span class="st">&quot;date&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.Date</span>(date)]</span>
-<span id="cb2-9"><a href="#cb2-9"></a>UNRATENSA[, <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(y)]</span>
-<span id="cb2-10"><a href="#cb2-10"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(UNRATENSA, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-11"><a href="#cb2-11"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> UNRATENSA, <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-12"><a href="#cb2-12"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-13"><a href="#cb2-13"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> UNRATENSA, <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-14"><a href="#cb2-14"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-15"><a href="#cb2-15"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-16"><a href="#cb2-16"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> UNRATENSA, <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-17"><a href="#cb2-17"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-18"><a href="#cb2-18"></a></span>
-<span id="cb2-19"><a href="#cb2-19"></a><span class="co">#Seasonally adjusted</span></span>
-<span id="cb2-20"><a href="#cb2-20"></a><span class="kw">data</span>(<span class="st">&quot;UNRATE&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb2-21"><a href="#cb2-21"></a>UNRATE =<span class="st"> </span><span class="kw">data.table</span>(UNRATE, <span class="dt">keep.rownames =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-22"><a href="#cb2-22"></a><span class="kw">colnames</span>(UNRATE) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb2-23"><a href="#cb2-23"></a>UNRATE[, <span class="st">&quot;date&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.Date</span>(date)]</span>
-<span id="cb2-24"><a href="#cb2-24"></a>UNRATE[, <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(y)]</span>
-<span id="cb2-25"><a href="#cb2-25"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(UNRATE, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-26"><a href="#cb2-26"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> UNRATE, <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-27"><a href="#cb2-27"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-28"><a href="#cb2-28"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> UNRATE, <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-29"><a href="#cb2-29"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-30"><a href="#cb2-30"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-31"><a href="#cb2-31"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> UNRATE, <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-32"><a href="#cb2-32"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-33"><a href="#cb2-33"></a></span>
-<span id="cb2-34"><a href="#cb2-34"></a><span class="co">##### GDP examples #####</span></span>
-<span id="cb2-35"><a href="#cb2-35"></a><span class="co">#Not seasonally adjusted</span></span>
-<span id="cb2-36"><a href="#cb2-36"></a><span class="kw">data</span>(<span class="st">&quot;NA000334Q&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb2-37"><a href="#cb2-37"></a>NA000334Q =<span class="st"> </span><span class="kw">data.table</span>(NA000334Q, <span class="dt">keep.rownames =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-38"><a href="#cb2-38"></a><span class="kw">colnames</span>(NA000334Q) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb2-39"><a href="#cb2-39"></a>NA000334Q[, <span class="st">&quot;date&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.Date</span>(date)]</span>
-<span id="cb2-40"><a href="#cb2-40"></a>NA000334Q[, <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(y)]</span>
-<span id="cb2-41"><a href="#cb2-41"></a>NA000334Q =<span class="st"> </span>NA000334Q[date <span class="op">&gt;=</span><span class="st"> &quot;1990-01-01&quot;</span>, ]</span>
-<span id="cb2-42"><a href="#cb2-42"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(NA000334Q, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-43"><a href="#cb2-43"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> NA000334Q, <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-44"><a href="#cb2-44"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-45"><a href="#cb2-45"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> NA000334Q, <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-46"><a href="#cb2-46"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-47"><a href="#cb2-47"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-48"><a href="#cb2-48"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> NA000334Q, <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-49"><a href="#cb2-49"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-50"><a href="#cb2-50"></a></span>
-<span id="cb2-51"><a href="#cb2-51"></a><span class="co">#Seasonally adjusted</span></span>
-<span id="cb2-52"><a href="#cb2-52"></a><span class="kw">data</span>(<span class="st">&quot;GDP&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb2-53"><a href="#cb2-53"></a>GDP =<span class="st"> </span><span class="kw">data.table</span>(GDP, <span class="dt">keep.rownames =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-54"><a href="#cb2-54"></a><span class="kw">colnames</span>(GDP) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb2-55"><a href="#cb2-55"></a>GDP[, <span class="st">&quot;date&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.Date</span>(date)]</span>
-<span id="cb2-56"><a href="#cb2-56"></a>GDP[, <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(y)]</span>
-<span id="cb2-57"><a href="#cb2-57"></a>GDP =<span class="st"> </span>GDP[date <span class="op">&gt;=</span><span class="st"> &quot;1990-01-01&quot;</span>, ]</span>
-<span id="cb2-58"><a href="#cb2-58"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(GDP, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-59"><a href="#cb2-59"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> GDP, <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-60"><a href="#cb2-60"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-61"><a href="#cb2-61"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> GDP, <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-62"><a href="#cb2-62"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-63"><a href="#cb2-63"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-64"><a href="#cb2-64"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> GDP, <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-65"><a href="#cb2-65"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-66"><a href="#cb2-66"></a></span>
-<span id="cb2-67"><a href="#cb2-67"></a><span class="co">##### S&amp;P 500 example #####</span></span>
-<span id="cb2-68"><a href="#cb2-68"></a><span class="kw">data</span>(<span class="st">&quot;SP500&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb2-69"><a href="#cb2-69"></a>SP500 =<span class="st"> </span><span class="kw">data.table</span>(SP500, <span class="dt">keep.rownames =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-70"><a href="#cb2-70"></a><span class="kw">colnames</span>(SP500) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb2-71"><a href="#cb2-71"></a>SP500[, <span class="st">&quot;date&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.Date</span>(date)]</span>
-<span id="cb2-72"><a href="#cb2-72"></a>SP500[, <span class="st">&quot;y&quot;</span> <span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(y)]</span>
-<span id="cb2-73"><a href="#cb2-73"></a>stsm =<span class="st"> </span><span class="kw">stsm_estimate</span>(SP500, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-74"><a href="#cb2-74"></a>stsm_fc =<span class="st"> </span><span class="kw">stsm_forecast</span>(stsm, <span class="dt">y =</span> SP500, <span class="dt">n.ahead =</span> <span class="kw">floor</span>(stsm<span class="op">$</span>freq)<span class="op">*</span><span class="dv">3</span>, <span class="dt">plot =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-75"><a href="#cb2-75"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-76"><a href="#cb2-76"></a>                <span class="kw">stsm_detect_anomalies</span>(stsm, <span class="dt">y =</span> SP500, <span class="dt">plot =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-77"><a href="#cb2-77"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb2-78"><a href="#cb2-78"></a>stsm_fc =<span class="st"> </span><span class="kw">merge</span>(stsm_fc, </span>
-<span id="cb2-79"><a href="#cb2-79"></a>                <span class="kw">stsm_detect_breaks</span>(stsm, <span class="dt">y =</span> SP500, <span class="dt">plot =</span> <span class="ot">TRUE</span>, <span class="dt">show_progress =</span> <span class="ot">TRUE</span>), </span>
-<span id="cb2-80"><a href="#cb2-80"></a>                <span class="dt">by =</span> <span class="st">&quot;date&quot;</span>, <span class="dt">all =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(autostsm)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="do">##### Unemployment rate examples #####</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATENSA&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>UNRATENSA <span class="ot">=</span> <span class="fu">data.table</span>(UNRATENSA, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(UNRATENSA) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;date&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATENSA, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATE&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>UNRATE <span class="ot">=</span> <span class="fu">data.table</span>(UNRATE, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(UNRATE) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>UNRATE[, <span class="st">&quot;date&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>UNRATE[, <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATE, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="do">##### GDP examples #####</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;NA000334Q&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>NA000334Q <span class="ot">=</span> <span class="fu">data.table</span>(NA000334Q, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(NA000334Q) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;date&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>NA000334Q <span class="ot">=</span> NA000334Q[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(NA000334Q, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;GDP&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>GDP <span class="ot">=</span> <span class="fu">data.table</span>(GDP, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(GDP) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>GDP[, <span class="st">&quot;date&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>GDP[, <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>GDP <span class="ot">=</span> GDP[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(GDP, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> GDP, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="do">##### S&amp;P 500 example #####</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;SP500&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>SP500 <span class="ot">=</span> <span class="fu">data.table</span>(SP500, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(SP500) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>SP500[, <span class="st">&quot;date&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>SP500[, <span class="st">&quot;y&quot;</span> <span class="sc">:</span><span class="er">=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(SP500, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> SP500, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 </div>
 

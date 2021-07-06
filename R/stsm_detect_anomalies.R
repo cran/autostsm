@@ -31,12 +31,10 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   #sig_level = 0.01
   #plot = smooth = TRUE
   #freq = exo = NULL
-  #stsm_build_dates = autostsm:::stsm_build_dates
-  #stsm_init_vals = autostsm:::stsm_init_vals
-  #stsm_check_y = autostsm:::stsm_check_y
-  #stsm_check_exo = autostsm:::stsm_check_exo
-  #stsm_format_exo = autostsm:::stsm_format_exo
-  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
+  #   tryCatch(source(i), error = function(err){NULL})
+  # }
+  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
   anomaly = predicted = value = variable = observed = NULL
@@ -96,41 +94,23 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   sd = stats::sd(y, na.rm = TRUE)
   y = (y - mean)/sd
   
-  #Get model specifications
-  decomp = model$decomp
-  trend = model$trend
-  if(!is.na(model$seasons)){
-    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
-  }else{
-    seasons = c()
-  }
-  if(!is.na(model$cycle)){
-    cycle = model$cycle
-  }else{
-    cycle = c()
-  }
-  
-  #Get the coefficients
-  par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
-  
   #Filter and smooth the data
-  sp = stsm_ssm(par, y, decomp, trend, init)
-  B_tt = kalman_filter(sp, matrix(y, nrow = 1), X, smooth)$B_tt
-  rownames(B_tt) = rownames(sp$Fm)
+  ssm = stsm_ssm(yt = y, model = model)
+  B_tt = kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt
+  rownames(B_tt) = rownames(ssm$Fm)
   
   #Get the unobserved series
   series = data.table(t(B_tt))
-  fev = (sp$Hm %*% (sp$Fm %*% sp$Qm %*% t(sp$Fm)) %*% t(sp$Hm)) + sp$Rm
+  fev = (ssm$Hm %*% (ssm$Fm %*% ssm$Qm %*% t(ssm$Fm)) %*% t(ssm$Hm)) + ssm$Rm
   
   #Lag the series
   series.l = copy(series)
   series.l[, colnames(series.l) := lapply(.SD, shift, type = "lag", n = 1), .SDcols = colnames(series.l)]
   
   #Get the model errors
-  pred_uc = (matrix(sp$Dm, nrow = nrow(sp$Dm), ncol = nrow(series)) + 
-               sp$Fm %*% t(as.matrix(series.l[, rownames(B_tt), with = FALSE])))
-  pred = t(matrix(sp$Am, nrow = 1, ncol = ncol(pred_uc)) + sp$Hm %*% pred_uc)
+  pred_uc = (matrix(ssm$Dm, nrow = nrow(ssm$Dm), ncol = nrow(series)) + 
+               ssm$Fm %*% t(as.matrix(series.l[, rownames(B_tt), with = FALSE])))
+  pred = t(matrix(ssm$Am, nrow = 1, ncol = ncol(pred_uc)) + ssm$Hm %*% pred_uc)
   errors = data.table(t(t(as.matrix(series[, rownames(B_tt), with = FALSE])) - pred_uc))
   errors[1:length(y), "pred" := y - pred]
   

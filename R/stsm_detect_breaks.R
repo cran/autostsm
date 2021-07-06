@@ -37,12 +37,10 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   #plot = smooth = show_progress = TRUE
   #freq = exo = cores = NULL
   #components = c("trend", "cycle", "seasonal")
-  #stsm_build_dates = autostsm:::stsm_build_dates
-  #stsm_init_vals = autostsm:::stsm_init_vals
-  #stsm_check_y = autostsm:::stsm_check_y
-  #stsm_check_exo = autostsm:::stsm_check_exo
-  #stsm_format_exo = autostsm:::stsm_format_exo
-  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
+  #   tryCatch(source(i), error = function(err){NULL})
+  # }
+  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
   break_type = date.lag = date.lead = variable = j = x = value = 
@@ -122,35 +120,23 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   sd = stats::sd(y, na.rm = TRUE)
   y = (y - mean)/sd
   
-  #Get model specifications
-  decomp = model$decomp
-  trend = model$trend
+  #Get model seasons
   if(!is.na(model$seasons)){
     seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
   }else{
     seasons = c()
   }
-  if(!is.na(model$cycle)){
-    cycle = model$cycle
-  }else{
-    cycle = c()
-  }
-  
-  #Get the coefficients
-  par = eval(parse(text = paste0("c(", model$coef, ")")))
-  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, NULL, cycle)
   
   #Filter and smooth the data
-  sp = stsm_ssm(par, y, decomp, trend, init)
-  B_tt = kalman_filter(sp, matrix(y, nrow = 1), X, smooth)$B_tt
-  rownames(B_tt) = rownames(sp$Fm)
-  
+  ssm = stsm_ssm(yt = y, model = model)
+  B_tt = kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt
+  rownames(B_tt) = rownames(ssm$Fm)
   
   #Get the unobserved series
   series = data.table(t(B_tt))
   
   #Detect structural breaks
-  comps = c("Tt_0", "Ct_0", "St")[c(TRUE, grepl("cycle", decomp), grepl("seasonal", decomp))]
+  comps = c("Tt_0", "Ct_0", "St")[c(TRUE, grepl("cycle", model$decomp), grepl("seasonal", model$decomp))]
   
   #Detect structural breaks
   combine = function(x, y){
@@ -163,9 +149,25 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   }
   
   #Setup parallel computing
-  cl = parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(iter), parallel::detectCores())), cores))))
-  doSNOW::registerDoSNOW(cl)
-  `%fun%` = foreach::`%dopar%`
+  if(ifelse(!is.null(cores), cores > 1, TRUE)){
+    cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(iter), parallel::detectCores())), cores)))), 
+                  error = function(err){
+                    message("Parallel setup failed. Using single core.")
+                    return(NULL)
+                  })
+    if(!is.null(cl)){
+      doSNOW::registerDoSNOW(cl)
+      `%fun%` = foreach::`%dopar%`
+      stop_cluster = TRUE
+    }else{
+      stop_cluster = FALSE
+      `%fun%` = foreach::`%do%`
+    }
+  }else{
+    cl = NULL
+    stop_cluster = FALSE
+    `%fun%` = foreach::`%do%`
+  }
   
   if(show_progress == TRUE){
       pb = progress::progress_bar$new(
@@ -176,27 +178,25 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     invisible(pb$tick(0))
     progress = function(n){pb$tick()}
   }else{
-    progress = NULL
+    pb = progress = NULL
   }
   out = foreach::foreach(j = iter, .combine = combine, 
-                         .packages = c("data.table", "forecast", "strucchange", "stats", "tsutils"),
+                         .packages = c("data.table", "forecast", "strucchange", "stats"),
                          .options.snow = list(progress = progress)) %fun% {
+    hpc = ifelse(!is.null(cl), "foreach", "none")
     bp_dt = data.table()
     series_fit = data.table()
     if(j == "Tt_0"){
       #Trend break test
       dat = series[, c(j), with = FALSE][[1]]
       #Test if trend is trending up/down to test for breaks in growth, if not then breaks in level
-      ol = forecast::tsoutliers(stats::ts(dat, frequency = freq))
-      dat2 = copy(dat)
-      dat2[ol$index] = ol$replacements
-      if(tsutils::coxstuart(dat2, type = "trend")$p.value <= sig_level){
+      if(stsm_coxstuart(forecast::tsclean(dat, replace.missing = FALSE), type = "trend")$p.value <= sig_level){
         dat_trans = diff(dat)
       }else{
         dat_trans = dat
       }
       h = round(freq) + 2
-      bp = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1, hpc = "foreach"))
+      bp = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1, hpc = hpc))
       
       if(!all(is.na(bp$breakpoints))){
         #Trend break test results
@@ -237,7 +237,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
       dat_trans = abs(dat[[1]])
       bp1 = suppressWarnings(strucchange::breakpoints(dat_trans ~ 1,
                                                      h = min(c(h, round(0.33*length(dat_trans)))), 
-                                                     hpc = "foreach"))
+                                                     hpc = hpc))
       
       if(!all(is.na(bp1$breakpoints))){
         #Seasonal/cycle break test results
@@ -279,7 +279,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
         formula = formula(paste("y ~", paste(colnames(dat)[!grepl("y", colnames(dat)) & grepl("\\.l1", colnames(dat))], collapse = " + "), " - 1"))
         bp2 = suppressWarnings(strucchange::breakpoints(formula, data = dat,
                                                        h = min(c(h, round(0.33*length(dat_trans)))),
-                                                       hpc = "foreach"))
+                                                       hpc = hpc))
         
         if(!all(is.na(bp2$breakpoints))){
           #Seasonal/cycle periodicity break test results
@@ -363,7 +363,12 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
         }
       }
     }
-    suppressWarnings(rm(bp, fit, bp, bp1, bp2, dat, dat_trans, lm, lm_dat, formula, h, k, lm2, ol, dat2))
+    
+    if(stop_cluster == FALSE & show_progress == TRUE){
+      pb$tick()
+    }
+    
+    suppressWarnings(rm(bp, fit, bp, bp1, bp2, dat, dat_trans, lm, lm_dat, formula, h, k, lm2))
     gc()
     return(list(bp_dt = bp_dt, series_fit = series_fit))
   }
@@ -434,7 +439,9 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     final[, "break_type" := NA]
   }
   
-  parallel::stopCluster(cl)
+  if(stop_cluster == TRUE){
+    parallel::stopCluster(cl)
+  }
   
   cols = colnames(final)[colnames(final) %in% c("observed", "trend") | grepl("Tt_interval_", colnames(final))]
   final[, c(cols) := lapply(.SD, function(x){x*sd + mean}), .SDcols = c(cols)]

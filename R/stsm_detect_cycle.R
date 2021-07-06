@@ -36,7 +36,8 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
   
   #Redefine the cycle value
   prior[, "cycle" := y - trend]
-  if(tsutils::coxstuart(stats::na.omit(prior$cycle), type = "dispersion")$p.value <= sig_level){
+  if(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$cycle, replace.missing = FALSE)), 
+                    type = "deviation")$p.value <= sig_level){
     prior[, "cycle" := y/trend]
   }
   prior[, "t" := 1:.N]
@@ -46,7 +47,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
   harmonics = harmonics[freq/harmonics >= 2.5*freq & harmonics < 1/2]
   harmonics = harmonics[freq/harmonics <= nrow(prior)]
   if(length(harmonics) > 0){
-    if(is.null(cl) | ifelse(!is.null(cores), cores > 1, FALSE)){
+    if(is.null(cl) & ifelse(!is.null(cores), cores > 1, TRUE)){
       cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), min(c(length(harmonics), parallel::detectCores())), cores)))),
                     error = function(err){
                       message("Parallel setup failed. Using single core.")
@@ -78,7 +79,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
       invisible(pb$tick(0))
       progress = function(n){pb$tick()}
     }else{
-      progress = NULL
+      pb = progress = NULL
     }
     
     #Wavelet analysis for the cycle
@@ -96,7 +97,10 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
       pval = stats::pf(summary(lm)$fstatistic["value"], lower.tail = FALSE,
                        df1 = summary(lm)$fstatistic["numdf"], 
                        df2 = summary(lm)$fstatistic["dendf"])
-      tryCatch(pb$tick())
+      
+      if(stop_cluster == FALSE & show_progress == TRUE){
+        pb$tick()
+      }
       return(data.table(frequency = i/freq, period = freq/i, fstat = summary(lm)$fstatistic["value"], pval = pval))
     }
     

@@ -38,7 +38,7 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
   }
   ineqB = matrix(0, nrow = nrow(ineqA))
   constraints = list(ineqA = ineqA, ineqB = ineqB)
-  # constraints = list(ineqA = NULL, ineqB = NULL)
+  
   if("d" %in% names(par) & saturating_growth == FALSE){
     #The drift constant must be the sign of the prior
     ineqA = matrix(0, nrow = 1, ncol = length(par), 
@@ -86,26 +86,36 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
   }
   if("phi_c.1" %in% names(par)){
     #AR component must be stationary
-    ineqA = matrix(0, nrow = 1, ncol = length(par),
+    ineqA = matrix(0, nrow = 2, ncol = length(par),
                    dimnames = list(NULL, names(par)))
-    ineqA[, "phi_c.1"] = -1
-    ineqB = matrix(2, nrow = 1, ncol = 1)
+    ineqA[1, grepl("phi_c\\.\\d+", colnames(ineqA))] = 1
+    ineqA[2, grepl("phi_c\\.\\d+", colnames(ineqA))] = -1
+    ineqB = matrix(1, nrow = 2, ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(par["phi_c.1"] >= 2){
-      par["phi_c.1"] = 1.25
+    
+    test = (ineqA[, grepl("phi_c\\.\\d+", colnames(ineqA))] %*% matrix(par[grepl("phi_c\\.\\d+", names(par))], ncol = 1) <= -ineqB)
+    if(any(test == TRUE)){
+      vals = par[grepl("phi_c\\.\\d+", names(par))]
+      adj = (sum(vals) - 0.99)/length(vals)
+      par[grepl("phi_c\\.\\d+", names(par))] = sign(vals)*(abs(vals) - adj)
     }
   }
   if("theta_c.1" %in% names(par)){
     #MA component must be stationary
     ineqA = matrix(0, nrow = 2, ncol = length(par),
                    dimnames = list(NULL, names(par)))
-    ineqA[, names(par)[grepl("theta_c\\d+", names(par))]] = rbind(rep(1, sum(grepl("theta_c\\d+", names(par)))), rep(-1, sum(grepl("theta_c\\d+", names(par)))))
-    ineqB = matrix(c(1, 1), ncol = 1)
+    ineqA[1, grepl("theta_c\\.\\d+", colnames(ineqA))] = 1
+    ineqA[2, grepl("theta_c\\.\\d+", colnames(ineqA))] = -1
+    ineqB = matrix(1, nrow = 2, ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    if(abs(sum(par[grepl("theta_c\\d+", names(par))])) >= 1){
-      par[grepl("theta_c\\d+", names(par))] = -0.9/sum(grepl("theta_c\\d+", names(par)))
+    
+    test = (ineqA[, grepl("theta_c\\.\\d+", colnames(ineqA))] %*% matrix(par[grepl("theta_c\\.\\d+", names(par))], ncol = 1) <= -ineqB)
+    if(any(test == TRUE)){
+      vals = par[grepl("theta_c\\.\\d+", names(par))]
+      adj = (sum(vals) - 0.99)/length(vals)
+      par[grepl("theta_c\\.\\d+", names(par))] = sign(vals)*(abs(vals) - adj)
     }
   }
   if(("sig_d" %in% names(par) | "sig_t" %in% names(par)) & unconstrained == FALSE & saturating_growth == FALSE){

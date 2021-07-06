@@ -7,13 +7,10 @@
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
 #' @param seasons The seasonal lengths to split the seasonality into
 #' @param prior A data table created by stsm_prior
+#' @param sig_level Significance level for statistical tests
 #' @import data.table
 #' @return named vector containing the initial parameter estimates for estimation
-stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, prior = NULL){
-  if(any(is.na(y))){
-    y = suppressWarnings(imputeTS::na_kalman(y))
-  }
-  
+stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, prior = NULL, sig_level = 0.01){
   if(is.null(prior)){
     prior = stsm_prior(y, freq, decomp, seasons) 
   }else{
@@ -47,10 +44,10 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
   }
   
   div = max(c(1, sum(sapply(c("cycle", "seasonal"), function(x){grepl(x, decomp)}))))
-  arima = tryCatch(forecast::Arima(stats::ts(prior$cycle + prior$remainder/div, frequency = freq), order = c(2, 0, 1)), 
-                   error = function(err){NULL})
   #Cycle parameters
   if(grepl("cycle", decomp)){
+    arima = tryCatch(forecast::Arima(stats::ts(prior$cycle + prior$remainder/div, frequency = freq), order = c(2, 0, 1)), 
+                     error = function(err){NULL})
     if(is.null(cycle)){
       cycle = freq*5
     }
@@ -68,6 +65,10 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
     }
     par = c(par, phi_c = phi_c, lambda = 2*pi/cycle, sig_c = sig_c)
   }else{
+    arima = tryCatch(forecast::auto.arima(stats::ts(prior$cycle + prior$remainder/div, frequency = freq), 
+                                          max.d = 0, seasonal = FALSE, stationary = TRUE), 
+                     error = function(err){NULL})
+    
     if(!is.null(arima) & length(arima$coef) > 0){
       par = c(par, arima$coef[names(arima$coef) != "intercept"], sig_c = sqrt(arima$sigma2))
       names(par)[grepl("ar\\d+", names(par))] = gsub("ar", "phi_c.", names(par)[grepl("ar\\d+", names(par))])
@@ -75,7 +76,6 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
     }else{
       par = c(par, phi_c.1 = 1.25, phi_c.2 = -0.3, theta_c.1 = 0.75, sig_c = stats::sd(diff(prior$cycle + prior$remainder/div)))
     }
-    par = par[names(par) != "phi_c.2"]
   }
   
   #Seasonal parameters

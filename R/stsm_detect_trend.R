@@ -24,7 +24,7 @@
 #' @export
 stsm_detect_trend = function(y, freq, decomp = "", sig_level = 0.01, prior = NULL, seasons = NULL, cycle = NULL){
   #Bind data.table variables to the global environment
-  N = d = test = pval = sig = trend = remainder = seasonal = NULL
+  N = d = test = pval = sig = trend = remainder = seasonal = seasonal_adj = NULL
   
   #Set the prior
   if(is.null(prior)){
@@ -32,19 +32,26 @@ stsm_detect_trend = function(y, freq, decomp = "", sig_level = 0.01, prior = NUL
   }else{
     prior = copy(prior)
   }
-  prior[, "seasonal_adj" := y - seasonal]
+  prior[, "seasonal_adj" := y - seasonal - cycle]
   
   ##### Find the number of differences to make it stationary #####
   #Replace outliers for the trend test
-  ol = forecast::tsoutliers(stats::ts(prior$seasonal_adj, frequency = freq))
-  prior[ol$index, "seasonal_adj" := ol$replacements]
+  prior[, "seasonal_adj" := forecast::tsclean(seasonal_adj, replace.missing = FALSE)]
   #Test for a trend
-  trend_test = (tsutils::coxstuart(stats::na.omit(prior$seasonal_adj), type = "trend")$p.value <= sig_level)
+  trend_test = (stsm_coxstuart(stats::na.omit(prior$seasonal_adj), type = "trend")$p.value <= sig_level)
   #Calculate unit root tests for differences 0 to 2
-  ndiffs = c(forecast::ndiffs(prior$seasonal_adj, test = "adf", type = "level", alpha = sig_level, max.d = 2), 
+  if(trend_test == FALSE){
+    ndiffs = c(forecast::ndiffs(prior$seasonal_adj, test = "adf", type = "level", alpha = sig_level, max.d = 2), 
              forecast::ndiffs(prior$seasonal_adj, test = "pp", type = "level", alpha = sig_level, max.d = 2), 
              forecast::ndiffs(prior$seasonal_adj, test = "kpss", type = "level", alpha = sig_level, max.d = 2))
-  ndiffs = round(mean(ndiffs, na.rm = T))
+    ndiffs = round(mean(ndiffs, na.rm = T))
+  }else{
+    ndiffs = c(forecast::ndiffs(diff(prior$seasonal_adj), test = "adf", type = "level", alpha = sig_level, max.d = 1), 
+                forecast::ndiffs(diff(prior$seasonal_adj), test = "pp", type = "level", alpha = sig_level, max.d = 1), 
+                forecast::ndiffs(diff(prior$seasonal_adj), test = "kpss", type = "level", alpha = sig_level, max.d = 1))
+    ndiffs = round(mean(ndiffs, na.rm = T)) + 1
+  }
+  
   if(ndiffs >= 2){
     trend = "double-random-walk"
   }else if(ndiffs == 1 & trend_test == TRUE){

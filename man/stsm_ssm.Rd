@@ -10,7 +10,11 @@ stsm_ssm(
   decomp = NULL,
   trend = NULL,
   init = NULL,
-  model = NULL
+  model = NULL,
+  prior = NULL,
+  freq = NULL,
+  seasons = NULL,
+  cycle = NULL
 )
 }
 \arguments{
@@ -29,6 +33,14 @@ stsm_ssm(
 \item{init}{Initial state values for the Kalman filter}
 
 \item{model}{a stsm_estimate model object}
+
+\item{prior}{Model prior built from stsm_prior. Only needed if prior needs to be built for initial values}
+
+\item{freq}{Frequency of the data. Only needed if prior needs to be built for initial values and prior = NULL}
+
+\item{seasons}{Numeric vector of seasonal frequencies. Only needed if prior needs to be built for initial values and prior = NULL}
+
+\item{cycle}{Numeric value for the cycle frequency. Only needed if prior needs to be built for initial values and prior = NULL}
 }
 \value{
 List of space space matrices

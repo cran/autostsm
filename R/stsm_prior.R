@@ -24,9 +24,9 @@ stsm_prior = function(y, freq, decomp = "", seasons = NULL, cycle = NULL){
   #Bind data.table global variables
   trend = seasonal = cycle = remainder = seasonalcycle = NULL
   
-  #Impute missing values for using the Kalman filter for prior decompoosition
+  #Impute missing values for using the Kalman filter for prior decomposition
   if(any(is.na(y))){
-    y = suppressWarnings(imputeTS::na_kalman(y))
+    y = suppressWarnings(stsm_na_kalman(y))
   }
   
   #Split the data into trend + seasonal-cycle + remainder
@@ -48,23 +48,16 @@ stsm_prior = function(y, freq, decomp = "", seasons = NULL, cycle = NULL){
   
   #Estimate the seasonal and cycle components
   if(ifelse(!is.null(seasons), length(seasons) > 0, FALSE)){
-    temp = stats::stl(stats::ts(y - prior$trend, frequency = freq), s.window = 7, s.degree = 1)$time.series
-    prior[, "seasonalcycle" := rowSums(temp[, c("trend", "seasonal")]) + 2/3*temp[, "remainder"]][, "remainder" := 1/3*temp[, "remainder"]]
-    prior[, "cycle" := temp[, "trend"]]# + 1/3*temp[, "remainder"]]
-    ff = data.table(seasonal = prior$seasonalcycle - prior$cycle, t = 1:nrow(prior))
-    for(j in c(seasons, cycle)){
-      ff[, paste0("sin", j) := sin(2*pi*1/j*t)]
-      ff[, paste0("cos", j) := cos(2*pi*1/j*t)]
-    }
-    ff[, "t" := NULL]
-    lm_s = stats::lm(seasonal ~ ., data = ff)
-    prior = cbind(prior, do.call("cbind", lapply(seasons, function(x){
-      matrix(stats::coef(lm_s)["(Intercept)"]/length(seasons) +
-               c(as.matrix(ff[, paste0(c("sin", "cos"), x), with = FALSE]) %*%
-                   matrix(stats::coef(lm_s)[paste0(c("sin", "cos"), x)], ncol = 1)),
-             ncol = 1)
-    })))
-    colnames(prior)[(ncol(prior) - length(seasons) + 1):ncol(prior)] = paste0("seasonal", seasons)
+    temp = forecast::mstl(forecast::msts(y - prior$trend, seasonal.periods = seasons, ts.frequency = freq))
+    colnames(temp)[grepl("Seasonal", colnames(temp))] = sapply(colnames(temp)[grepl("Seasonal", colnames(temp))], function(x){
+      s = as.numeric(gsub("Seasonal", "", x))
+      return(paste0("seasonal", seasons[which.min(abs(s - seasons))]))
+    })
+    prior = cbind(prior, temp[, grepl("seasonal", colnames(temp))])
+    prior[, colnames(prior)[grepl("seasonal", colnames(prior))] := lapply(.SD, as.numeric), 
+          .SDcols = colnames(prior)[grepl("seasonal", colnames(prior))]]
+    prior[, "cycle" := as.numeric(temp[, "Trend"])]
+    prior[, "seasonalcycle" := rowSums(temp[, !colnames(temp) %in% c("Data")])]
     prior[, "seasonal" := rowSums(prior[, paste0("seasonal", seasons), with = FALSE])]
     prior[, "remainder" := y - trend - seasonal - cycle]
   }

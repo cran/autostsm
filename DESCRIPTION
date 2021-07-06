@@ -1,8 +1,8 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 1.4
-Date: 2021-06-01
+Version: 1.5
+Date: 2021-07-01
 Author: Alex Hubbard
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Description: Automatic model selection for structural time series decomposition into trend, cycle, and seasonal components using the Kalman filter. 
@@ -10,16 +10,16 @@ Description: Automatic model selection for structural time series decomposition 
   Kim, Chang-Jin and Charles R. Nelson (1999) "State-Space Models with Regime Switching: Classical and Gibbs-Sampling Approaches with Applications" <doi:10.7551/mitpress/6444.001.0001><http://econ.korea.ac.kr/~cjkim/>. 
 License: GPL (>= 2)
 Imports: maxLik (>= 1.4), forecast (>= 8.13), lubridate (>= 1.7),
-        tsutils (>= 0.9), ggplot2 (>= 3.3), gridExtra (>= 2.3),
-        strucchange (>= 1.5), imputeTS (>= 3.1), foreach (>= 1.5),
-        doSNOW (>= 1.0), parallel (>= 4.0), zoo (>= 1.8), lmtest (>=
-        0.9), ggrepel(>= 0.9), progress (>= 1.2), sandwich (>= 3.0),
+        ggplot2 (>= 3.3), gridExtra (>= 2.3), strucchange (>= 1.5),
+        foreach (>= 1.5), doSNOW (>= 1.0), parallel (>= 4.0), zoo (>=
+        1.8), lmtest (>= 0.9), ggrepel(>= 0.9), progress (>= 1.2),
+        sandwich (>= 3.0),
 Depends: R (>= 3.5.0), data.table (>= 1.13)
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2021-06-08 23:47:03 UTC; alex.hubbard
+Packaged: 2021-07-06 17:22:07 UTC; alex.hubbard
 Repository: CRAN
-Date/Publication: 2021-06-09 08:10:05 UTC
+Date/Publication: 2021-07-06 21:50:05 UTC

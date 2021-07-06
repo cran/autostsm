@@ -89,14 +89,10 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #optim_methods = "BFGS"
   #maxit = 10000
   #verbose = TRUE
-  #stsm_build_dates = autostsm:::stsm_build_dates
-  #stsm_init_pars = autostsm:::stsm_init_pars
-  #stsm_init_vals = autostsm:::stsm_init_vals
-  #stsm_constraints = autostsm:::stsm_constraints
-  #stsm_check_y = autostsm:::stsm_check_y
-  #stsm_check_exo = autostsm:::stsm_check_exo
-  #stsm_format_exo = autostsm:::stsm_format_exo
-  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
+  # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
+  #   tryCatch(source(i), error = function(err){NULL})
+  # }
+  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Argument checks
   if(sig_level <= 0 | sig_level > 0.1){
@@ -161,7 +157,10 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   exo = stsm_format_exo(exo, dates, range)
   
   #Set up parallel computing
-  cl = tryCatch(parallel::makeCluster(max(c(1, ifelse(is.null(cores), parallel::detectCores(), cores)))),
+  if(is.null(cores)){
+    cores = parallel::detectCores()
+  }
+  cl = tryCatch(parallel::makeCluster(max(c(1, cores))),
                 error = function(err){
                   message("Parallel setup failed. Using single core.")
                   return(NULL)
@@ -177,17 +176,6 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     message("Detecting the appropriate decomposition...")
   }
   
-  #Detect multiplicative model
-  if(is.null(multiplicative)){
-    if(verbose == TRUE){
-      message("Checking for a multiplicative model...")
-    }
-    multiplicative = stsm_detect_multiplicative(y, freq, sig_level)
-  }
-  if(multiplicative == TRUE){
-    y = log(y)
-  }
-  
   #Set the prior
   prior = stsm_prior(y, freq)
   
@@ -196,7 +184,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     if(verbose == TRUE){
       message("Checking for seasonality...")
     }
-    seasons = stsm_detect_seasonality(y, freq, sig_level, prior, cl = cl, cores = cores, show_progress = verbose)
+    seasons = stsm_detect_seasonality(y, freq, sig_level, prior, cl, cores, show_progress = verbose)
   }
   if(is.null(seasons) | all(seasons == FALSE)){
     seasons = numeric(0)
@@ -207,14 +195,26 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     if(verbose == TRUE){
       message("Checking for a cycle...")
     }
-    cycle = stsm_detect_cycle(y, freq, sig_level, prior, cl = cl, cores = cores, show_progress = verbose)
+    cycle = stsm_detect_cycle(y, freq, sig_level, prior, cl , cores, show_progress = verbose)
   }
   if(is.null(cycle) | all(cycle == FALSE)){
     cycle = numeric(0)
   }
   
   #Reset the prior
-  if(length(seasons) > 0){
+  if(length(seasons) > 0 | length(cycle) > 0){
+    prior = stsm_prior(y, freq, seasons = seasons, cycle = cycle)
+  }
+  
+  #Detect multiplicative model
+  if(is.null(multiplicative)){
+    if(verbose == TRUE){
+      message("Checking for a multiplicative model...")
+    }
+    multiplicative = stsm_detect_multiplicative(y, freq, sig_level, prior)
+  }
+  if(multiplicative == TRUE){
+    y = log(y)
     prior = stsm_prior(y, freq, seasons = seasons, cycle = cycle)
   }
   
@@ -267,77 +267,20 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   
   #Set the initial parameter values
   if(is.null(par)){
-    par = stsm_init_pars(y, freq, trend, cycle, decomp, seasons, prior)
+    par = stsm_init_pars(y, freq, trend, cycle, decomp, seasons, prior, sig_level)
   }
   
   #Set any fixed parameters
-  fixed = NULL
-  if(det_obs == TRUE){
-    if("sig_c" %in% names(par)){
-      par["sig_c"] = par["sig_c"] + par["sig_e"]
-    }else if("sig_d" %in% names(par) & "sig_t" %in% names(par)){
-      par["sig_d"] = par["sig_d"] + par["sig_e"]/2
-      par["sig_t"] = par["sig_t"] + par["sig_e"]/2
-    }else if("sig_d" %in% names(par) & !"sig_t" %in% names(par)){
-      par["sig_d"] = par["sig_d"] + par["sig_e"]
-    }else if("sig_t" %in% names(par) & !"sig_d" %in% names(par)){
-      par["sig_t"] = par["sig_t"] + par["sig_e"]
-    }else if("sig_c" %in% names(par)){
-      par["sig_c"] = par["sig_c"] + par["sig_e"]
-    }
-    par["sig_e"] = 0
-    fixed = c(fixed, "sig_e")
-  }
-  if(det_trend == TRUE){
-    if("sig_d" %in% names(par)){
-      par["sig_d"] = par["sig_d"] + par["sig_t"]
-    }
-    par["sig_t"] = 0
-    fixed = c(fixed, "sig_t")
-  }
-  if(det_drift == TRUE){
-    if("sig_t" %in% names(par) & det_trend == FALSE){
-      par["sig_t"] = par["sig_t"] + par["sig_d"]
-    }
-    par["sig_d"] = 0
-    fixed = c(fixed, "sig_d")
-  }
-  if(det_cycle == TRUE){
-    if("sig_e" %in% names(par) & det_obs == FALSE){
-      par["sig_e"] = par["sig_e"] + par["sig_c"]  
-    }else if("sig_s" %in% names(par) & det_seas == FALSE){
-      par["sig_s"] = par["sig_s"] + par["sig_c"]
-    }
-    par["sig_c"] = 0
-    fixed = c(fixed, "sig_c")
-  }
-  if(det_seas == TRUE){
-    if("sig_e" %in% names(par) & det_obs == FALSE){
-      par["sig_e"] = par["sig_e"] + par["sig_s"]
-    }else if("sig_c" %in% names(par) & det_cycle == FALSE){
-      par["sig_c"] = par["sig_c"] + par["sig_s"]
-    }
-    par[grepl("sig_s", names(par))] = 0
-    fixed = c(fixed, names(par)[grepl("sig_s", names(par))])
-  }
-  if(saturating_growth == TRUE){
-    par[names(par) == "d"] = 0
-    fixed = c(fixed, "d")
-  }
-  if(is.null(exo)){
-    X = t(matrix(0, nrow = length(y), ncol = 1))
-    rownames(X) = "X"
-    par = c(par, beta_X = 0)
-    fixed = c(fixed, "beta_X")
-  }else{
-    X = t(exo)
-    par = c(par, beta_ = stats::coef(stats::lm(y ~ . - 1, data = data.frame(cbind(y, exo)))))
-  }
+  fixed = stsm_fixed_pars(par, y, det_obs, det_trend, det_drift, det_cycle, 
+                          det_seas, saturating_growth, exo)
+  par = fixed[["par"]]
+  X = fixed[["X"]]
+  fixed = fixed[["fixed"]]
   
   ###### Initial values for the unobserved components #####
-  init = stsm_init_vals(y, par, freq, trend, decomp, seasons, prior, cycle)
-  par = c(par, P0 = 1)
-  #Set uncertainty to be the rescaled variance of the time series
+  ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, seasons = seasons)
+  init = ssm[c("B0", "P0")]
+  par = c(par, P0 = stats::var(y, na.rm = T)) #Set uncertainty to be the rescaled variance of the time series
   
   ##### Inequality constraints: ineqA %*% par + ineqB > 0 => ineqA %*% par > -ineqB #####
   constraints = stsm_constraints(prior, par, freq, unconstrained, det_trend, det_drift, det_cycle, det_seas, det_obs, saturating_growth)
@@ -347,8 +290,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   
   #Define the objective function
   objective = function(par, yt, freq, decomp, trend, init){
-    sp = stsm_ssm(par, yt, decomp, trend, init)
-    ans = kalman_filter(sp, yt, X, smooth = FALSE)
+    ssm = stsm_ssm(par, yt, decomp, trend, init)
+    ans = kalman_filter(ssm, yt, X, smooth = FALSE)
     return(ans$loglik)
   }
   
