@@ -48,12 +48,15 @@ stsm_prior = function(y, freq, decomp = "", seasons = NULL, cycle = NULL){
   
   #Estimate the seasonal and cycle components
   if(ifelse(!is.null(seasons), length(seasons) > 0, FALSE)){
-    temp = forecast::mstl(forecast::msts(y - prior$trend, seasonal.periods = seasons, ts.frequency = freq))
+    temp = forecast::mstl(forecast::msts(y - prior$trend, seasonal.periods = seasons, 
+                                         ts.frequency = ifelse(length(y) < 2*freq, ifelse(max(seasons) < freq/2, max(seasons), length(y)/2*0.99), freq)))
     colnames(temp)[grepl("Seasonal", colnames(temp))] = sapply(colnames(temp)[grepl("Seasonal", colnames(temp))], function(x){
       s = as.numeric(gsub("Seasonal", "", x))
       return(paste0("seasonal", seasons[which.min(abs(s - seasons))]))
     })
-    prior = cbind(prior, temp[, grepl("seasonal", colnames(temp))])
+    prior = cbind(prior, 
+                  matrix(temp[, grepl("seasonal", colnames(temp))], ncol = sum(grepl("seasonal", colnames(temp))), 
+                         dimnames = list(NULL, colnames(temp)[grepl("seasonal", colnames(temp))])))
     prior[, colnames(prior)[grepl("seasonal", colnames(prior))] := lapply(.SD, as.numeric), 
           .SDcols = colnames(prior)[grepl("seasonal", colnames(prior))]]
     prior[, "cycle" := as.numeric(temp[, "Trend"])]
