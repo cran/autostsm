@@ -13,8 +13,8 @@
 #' @param plot.fc Logical, whether to plot the forecast
 #' @param n.hist Number of historical periods to include in the forecast plot. If plot = TRUE and n.hist = NULL, defaults to 3 years.
 #' @param smooth Whether or not to use the Kalman smoother
-#' @param n.ahead the number of periods to forecast
 #' @param dampen_cycle Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence
+#' @param envelope_ci Whether to create a envelope for the confidence interval to smooth out seasonal fluctuations
 #' @import data.table ggplot2
 #' @useDynLib autostsm, .registration=TRUE
 #' @return data table (or list of data tables) containing the filtered and/or smoothed series.
@@ -33,7 +33,8 @@
 #' }
 #' @export
 stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc = NULL, ci = 0.8, 
-                         plot = FALSE, plot.decomp = FALSE, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE){
+                         plot = FALSE, plot.decomp = FALSE, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, 
+                         dampen_cycle = FALSE, envelope_ci = FALSE){
   #model = stsm
   #n.ahead = floor(model$freq*3)
   #ci = 0.8
@@ -43,11 +44,11 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
-  #Rcpp::sourceCpp("src/kalmanfilter.cpp")
-  
+  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
+
   #Bind data.table variables to the global environment
   fev = extrema = fitted = variable = value = cycle = seasonal = observed = remainder = 
-    forecast = group = NULL
+    forecast = group = Tt_0 = Ct_0 = Dt_0 = interpolated = NULL
   
   #Argument checks
   if(!all(sapply(c(plot, plot.decomp, plot.fc, smooth, dampen_cycle), is.logical))){
@@ -95,6 +96,14 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
   exo = stsm_format_exo(exo, dates, range)
+  
+  #Interpolate dates
+  if(!is.null(model$interpolate)){
+    y = stsm_dates_to_interpolate(y = y, dates = dates, exo = exo, interpolate = model$interpolate)
+    dates = y$dates
+    exo = y$exo
+    y = y$y
+  }
   
   #Set the historical exogenous variables
   if(is.null(exo)){
@@ -153,7 +162,16 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  B_tt = kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt
+  if(!is.null(model$interpolate)){
+    int_per = ssm[["int_per"]]
+    n.ahead = n.ahead*int_per
+    if(is.null(exo.fc)){
+      if(n.ahead > 0){
+        X = cbind(X, matrix(0, ncol = n.ahead - (ncol(X) - length(y))))
+      }
+    }
+  }
+  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt, type = "message")
   rownames(B_tt) = rownames(ssm$Fm)
 
   #Get the unobserved series
@@ -208,7 +226,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       }
     }
     
-    series[!is.na(fev), "fitted" := c(matrix(ssm$Am, nrow = 1, ncol = nrow(series[!is.na(fev), ])) +  + 
+    series[!is.na(fev), "fitted" := c(matrix(ssm$Am, nrow = 1, ncol = nrow(series[!is.na(fev), ])) +
                                         ssm$Hm %*% t(as.matrix(series[!is.na(fev), rownames(B_tt), with = FALSE])) + 
                                         matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, (length(y) + 1):ncol(X)])]
     
@@ -216,30 +234,32 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     series[!is.na(fev), paste0((1/2 + ci/2)*100, "%") := stats::qnorm(1/2 + ci/2, fitted, sqrt(fev))]
     series[length(y), c(paste0((1/2 - ci/2)*100, "%"), paste0((1/2 + ci/2)*100, "%")) := fitted]
     
-  #   #Create envelope around seasonal fluctuations in the confidence intervals
-  #   if(!is.null(seasons) & all(!is.na(seasons)) & length(seasons) > 0){
-  #     series[, "rn" := 1:.N]
-  #     series = melt(series, id.vars = "rn")
-  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-  #            "smooth" := stats::predict(stats::smooth.spline(value))$y, 
-  #            by = "variable"]
-  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-  #             "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))), 
-  #                                   FUN = max), 
-  #             by = "variable"]
-  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-  #             "shift" := nafill(shift, type = "locf"), 
-  #             by = "variable"]
-  #     series = series[.N:1, ]
-  #     series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value), 
-  #             "shift" := nafill(shift, type = "locf"), 
-  #             by = "variable"]
-  #     series = series[.N:1, ]
-  #     series[variable == paste0((1/2 + ci/2)*100, "%"), "value" := smooth + shift]
-  #     series[variable == paste0((1/2 - ci/2)*100, "%"), "value" := smooth - shift]
-  #     series = dcast(series, "rn ~ variable", value.var = "value")
-  #     series[, "rn" := NULL]
-  #   }
+    #Create envelope around seasonal fluctuations in the confidence intervals
+    if(envelope_ci == TRUE){
+      if(!is.null(seasons) & all(!is.na(seasons)) & length(seasons) > 0){
+        series[, "rn" := 1:.N]
+        series = melt(series, id.vars = "rn")
+        series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
+               "smooth" := stats::predict(stats::smooth.spline(value))$y,
+               by = "variable"]
+        series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
+                "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))),
+                                      FUN = max),
+                by = "variable"]
+        series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
+                "shift" := nafill(shift, type = "locf"),
+                by = "variable"]
+        series = series[.N:1, ]
+        series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
+                "shift" := nafill(shift, type = "locf"),
+                by = "variable"]
+        series = series[.N:1, ]
+        series[variable == paste0((1/2 + ci/2)*100, "%"), "value" := smooth + shift]
+        series[variable == paste0((1/2 - ci/2)*100, "%"), "value" := smooth - shift]
+        series = dcast(series, "rn ~ variable", value.var = "value")
+        series[, "rn" := NULL]
+      }
+    }
     series[, "fev" := NULL]
     rm(Fm_pow)
   }
@@ -279,13 +299,31 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
         dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
       }else if(floor(freq) == 52){
         #Weekly frequency
-        dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
+        if(is.null(model$interpolate)){
+          dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
+        }else if(model$interpolate == "daily"){
+          dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
+        }
       }else if(floor(freq) == 12){
         #Monthly frequency
-        dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
+        if(is.null(model$interpolate)){
+          dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
+        }else if(model$interpolate == "weekly"){
+          dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
+        }else if(model$interpolate == "daily"){
+          dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
+        }
       }else if(floor(freq) == 4){
         #Quarterly frequency
-        dates.fc = dates[length(dates)] %m+% months((1:n.ahead)*3)
+        if(is.null(model$interpolate)){
+          dates.fc = dates[length(dates)] %m+% months((1:n.ahead)*3)
+        }else if(model$interpolate == "monthly"){
+          dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
+        }else if(model$interpolate == "weekly"){
+          dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
+        }else if(model$interpolate == "daily"){
+          dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
+        }
       }else if(floor(freq) == 1){
         #Yearly frequency
         dates.fc = dates[length(dates)] %m+% lubridate::years(1:n.ahead)
@@ -305,21 +343,50 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(!"Tt_0" %in% colnames(series)){
     series[, "trend" := 0]
   }else{
-    colnames(series)[colnames(series) == "Tt_0"] = "trend"
+    if(is.null(model$interpolate)){
+      colnames(series)[colnames(series) == "Tt_0"] = "trend"
+    }else if(model$interpolate_method == "eop"){
+      series[, "trend" := shift(Tt_0, n = 1, type = "lag")]
+    }else if(model$interpolate_method == "avg"){
+      series[, "trend" := shift(frollmean(Tt_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    }else if(model$interpolate_method == "sum"){
+      series[, "trend" := shift(frollsum(Tt_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    }
   }
   
   #Set the drift
   if(!"Dt_0" %in% colnames(series)){
     series[, "drift" := 0]
   }else{
-    colnames(series)[colnames(series) == "Dt_0"] = "drift"
+    if(is.null(model$interpolate)){
+      colnames(series)[colnames(series) == "Dt_0"] = "drift"
+    }else if(model$interpolate_method == "eop"){
+      series[, "drift" := shift(Dt_0, n = 1, type = "lag")]
+    }else if(model$interpolate_method == "avg"){
+      series[, "drift" := shift(frollmean(Dt_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    }else if(model$interpolate_method == "sum"){
+      series[, "drift" := shift(frollsum(Dt_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    }
   }
   
   #Set the cycle
   if(!"Ct_0" %in% colnames(series)){
     series[, "cycle" := 0]
   }else{
-    colnames(series)[colnames(series) == "Ct_0"] = "cycle"
+    if(is.null(model$interpolate)){
+      colnames(series)[colnames(series) == "Ct_0"] = "cycle"
+    }else if(model$interpolate_method == "eop"){
+      series[, "cycle" := shift(Ct_0, n = 1, type = "lag")]
+    }else if(model$interpolate_method == "avg"){
+      series[, "cycle" := shift(frollmean(Ct_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    }else if(model$interpolate_method == "sum"){
+      series[, "cycle" := shift(frollsum(Ct_0, n = int_per, align = "right"), type = "lag", n = 1)]
+    } 
+  }
+  
+  #Set the interpolation
+  if("It_0" %in% colnames(series)){
+    colnames(series)[colnames(series) == "It_0"] = "interpolated"
   }
   
   #Set the seasonal
@@ -332,6 +399,15 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       series[, "seasonal" := rowSums(series[, grepl("seasonal", colnames(series)), with = FALSE])]
     }else{
       colnames(series)[grepl("seasonal", colnames(series))] = "seasonal"
+    }
+    if(!is.null(model$interpolate)){
+      if(model$interpolate_method == "eop"){
+        series[, "seasonal" := shift(seasonal, n = 1, type = "lag")]
+      }else if(model$interpolate_method == "avg"){
+        series[, "seasonal" := shift(frollmean(seasonal, n = int_per, align = "right"), type = "lag", n = 1)]
+      }else if(model$interpolate_method == "sum"){
+        series[, "seasonal" := shift(frollsum(seasonal, n = int_per, align = "right"), type = "lag", n = 1)]
+      } 
     }
   }
   
@@ -351,7 +427,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   #Combine the filtered series
   final = data.table(date = c(dates, dates.fc), observed = c(y, y.fc), 
-                     series[, colnames(series) %in% c("trend", "drift", "cycle", "remainder", "fitted", rownames(X)) | grepl("seasonal|\\%", colnames(series)), with = FALSE])
+                     series[, colnames(series) %in% c("trend", "drift", "cycle", "remainder", "fitted", "interpolated", rownames(X)) | grepl("seasonal|\\%", colnames(series)), with = FALSE])
   rm(series, B_tt)
   
   #Calculate adjusted series
@@ -366,10 +442,20 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   final[, "noise_adjusted" := observed - remainder]
   
   cols = colnames(final)[colnames(final) %in% c("observed", "trend", "fitted", paste0((1/2 + c(-ci, ci)/2)*100, "%")) | grepl("_adjusted", colnames(final))]
+  if(!is.null(model$interpolate)){
+    if(model$interpolate_method %in% c("avg", "eop")){
+      cols = c(cols, "interpolated")
+    }
+  }
   final[, c(cols) := lapply(.SD, function(x){x*sd + mean}), .SDcols = c(cols)]
   
   cols = colnames(final)[!colnames(final) %in% c("date", cols, rownames(X))]
   final[,  c(cols) := lapply(.SD, function(x){x*sd}), .SDcols = c(cols)]
+  if(!is.null(model$interpolate)){
+    if(model$interpolate_method == "sum"){
+      final[, "interpolated" := interpolated + mean/int_per]
+    }
+  }
   
   if(model$multiplicative == TRUE){
     final[, c(colnames(final)[!colnames(final) %in% c("date")]) := lapply(.SD, exp),
@@ -377,10 +463,11 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   final[date %in% dates, "forecast" := FALSE]
   final[is.na(forecast), "forecast" := TRUE]
+  final[forecast == TRUE, "observed" := NA]
   
   if(plot.decomp == TRUE){
     g = list()
-    g[["trend"]] = ggplot(data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = c("observed", "trend"))) +
+    g[["trend"]] = ggplot(data.table::melt(final[forecast == FALSE, ], id.vars = "date", measure.vars = c("observed", "trend"))[!is.na(value), ]) +
       labs(title = "Observed vs Trend", x = "", y = "") +
       geom_line(aes(x = date, y = value, group = variable, color = variable)) + theme_minimal() +
       scale_color_viridis_d() +
@@ -447,4 +534,39 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   colnames(final)[grepl("%", colnames(final))] = paste0(colnames(final)[grepl("%", colnames(final))], "_fc")
   return(final)
+}
+
+#' Kalman Filter
+#'
+#' Kalman filter an estimated model from stsm_estimate output. This is a wrapper to stsm_forecast with n.ahead = 0.
+#' @param model Structural time series model estimated using stsm_estimate.
+#' @param ci Confidence interval, value between 0 and 1 exclusive.
+#' @param y Univariate time series of data values. May also be a 2 column data frame containing a date column.
+#' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
+#' @param exo Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.
+#' @param plot, Logical, whether to plot everything
+#' @param plot.decomp Logical, whether to plot the filtered historical data
+#' @param smooth Whether or not to use the Kalman smoother
+#' @import data.table ggplot2
+#' @useDynLib autostsm, .registration=TRUE
+#' @return data table (or list of data tables) containing the filtered and/or smoothed series.
+#' @examples
+#' \dontrun{
+#' #GDP Not seasonally adjusted
+#' library(autostsm)
+#' data("NA000334Q", package = "autostsm") #From FRED
+#' NA000334Q = data.table(NA000334Q, keep.rownames = TRUE)
+#' colnames(NA000334Q) = c("date", "y")
+#' NA000334Q[, "date" := as.Date(date)]
+#' NA000334Q[, "y" := as.numeric(y)]
+#' NA000334Q = NA000334Q[date >= "1990-01-01", ]
+#' stsm = stsm_estimate(NA000334Q)
+#' fc = stsm_filter(stsm, y = NA000334Q, plot = TRUE)
+#' }
+#' @export
+stsm_filter = function(model, y, freq = NULL, exo = NULL, ci = 0.8, 
+                       plot = FALSE, plot.decomp = FALSE, smooth = TRUE){
+  stsm = stsm_forecast(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc = NULL, ci = 0.8, 
+                plot = plot, plot.decomp = plot.decomp, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE)
+  return(stsm)
 }

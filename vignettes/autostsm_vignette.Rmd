@@ -15,9 +15,10 @@ knitr::opts_chunk$set(
 )
 ```
 
-`autostm` (Automatic Structural Time Series Model) is designed to automatically detect the appropriate decomposition for a univariate time series into trend, seasonal, and cycle components using a state space approach. The unobserved components are estimated with the Kalman filter and all model parameters are estimated using maximum likelihood. The Kalman filter and smoother are implemented in `Rcpp` so it is reasonably fast. This package is designed to handle time series of any frequency (standard or not), series with multiple seasonalities, seasonalities with fractional periodicities, missing data imputation, and irregularly spaced dates (i.e. daily data with missing data due to weekends and holidays, etc.). 
+`autostm` (Automatic Structural Time Series Model) is designed to automatically detect the appropriate decomposition for a univariate time series into trend, seasonal, and cycle components using a state space approach. The package also has the functionality perform structural interpolation: i.e. interpolated a quarterly series into a monthly series using either end of period, period average, or period sum methods. The unobserved components are estimated with the Kalman filter and all model parameters are estimated using maximum likelihood. The Kalman filter and smoother are implemented in `Rcpp` so it is reasonably fast. This package is designed to handle time series of any frequency (standard or not), series with multiple seasonalities, seasonalities with fractional periodicities, missing data imputation, and irregularly spaced dates (i.e. daily data with missing data due to weekends and holidays, etc.).
 
-With ease-of-use in mind, all the user has to do is provide a two column data frame: one column with dates and one column with the univariate time series. Everything else is handled by the algorithm including data frequency detection (observations per year), trend specification, cycle specification, seasonal specification, missing data imputation, anomaly detection, structural break detection, and whether or not to log transform the data. The user can manually set the preferred decomposition if desired, however. All components are assumed to be stochastic, which allows for time-varying trend, cycle, and seasonalities, unless the user specifies otherwise using the `det_trend`, `det_drift`, `det_seas`, `det_cycle`, and `det_obs` arguments in `stsm_estimate`. The algorithm can handle secondly, minutely, hourly, daily, monthly, and quarterly frequencies as well as daily data that is weekday only. It is also capable of handling non-standard frequencies (i.e. frequencies that are non of the above). The user only needs to call `stsm_estimate` to fit the model and `stsm_forecast` to filter and forecast the data. Additionally, the user can call `stsm_detect_anomalies` and `stsm_detect_breaks` to perform anomaly and structural break detection respectively. 
+
+With ease-of-use in mind, all the user has to do is provide a two column data frame: one column with dates and one column with the univariate time series. Everything else is handled by the algorithm including data frequency detection (observations per year), trend specification, cycle specification, seasonal specification, missing data imputation, anomaly detection, structural break detection, and whether or not to log transform the data. The user can manually set the preferred decomposition if desired, however. All components are assumed to be stochastic, which allows for time-varying trend, cycle, and seasonalities, unless the user specifies otherwise using the `det_trend`, `det_drift`, `det_seas`, `det_cycle`, and `det_obs` arguments in `stsm_estimate`. The algorithm can handle secondly, minutely, hourly, daily, monthly, and quarterly frequencies as well as daily data that is weekday only. It is also capable of handling non-standard frequencies (i.e. frequencies that are non of the above). To build an intepolation model, all the user has to do is set `interpolate` and `interpolate_method`. The user only needs to call `stsm_estimate` to fit the model and `stsm_forecast` to filter and forecast the data. Additionally, the user can call `stsm_detect_anomalies` and `stsm_detect_breaks` to perform anomaly and structural break detection respectively. 
 
 # State Space Model
 
@@ -342,6 +343,27 @@ $$
 
 are also included to ensure that the trend accounts for the least variability among all the components. It can be relaxed by setting `unconstrained = TRUE` in `stsm_estimate`.
 
+### Interpolation Models
+
+If an interpolation model is specified, the model is redefined based on the values set in `interpolate` and `interpolate_method`. For all interpolation models, 
+
+$$
+I_t = T_{t-1} + S_{t-1} + C_{t-1}
+$$
+where $I_t$ is the interpolated series and a deterministic observation equation is used by setting $\sigma_e = 0$. The only other that changes is the specification of the observation equation, which is determined by the interpolation method
+
+- End of period, then $Y_t = I_t$
+- Period average, then $Y_t = \frac{1}{N}(I_t + \ldots + I_{t-N+1})$
+- Period sum, then $Y_t = I_t + \ldots + I_{t-N+1}$
+
+where $N$ is the period to interpolate over. For example, if the frequency of the data is quarterly and the user would like to interpolate the data to a monthly frequency, then $N = 3$. 
+
+The interpolation frequency is set by specifying `interpolate` to "quarterly", "monthly", "weekly", or "daily" as long as that frequency is higher than the frequency of the data. Although, it is recommended to only interpolate one frequency higher than the frequency of the data.
+
+Interpolation methods are defined by setting `interpolate_method` to "eop" for end of period, "avg" for period average, and "sum" for period sum. 
+
+Interpolation errors will depend on the volatility of the time series as well as model misspecification. However, given the model, the end of period method will be more susceptible to errors due to volatility than either the average or sum methods.
+
 ## Anomaly Detection
 
 Anomaly detection uses the estimated structural model and the recursive nature of the Kalman filter to detect observations that are outside a given threshold of the model's predicted values for time $t$ given the data and estimates of the unobserved components at time $t-1$. The threshold is determined by the forecast error variance of the estimated structural model. Anomalies that are detected can then be replaced with the modeled predicted values or threshold if the user wants to replace outliers. 
@@ -377,7 +399,7 @@ This procedure can be time consuming, even with high performance parallel comput
 
 Below is an example of how to use this package:
 
-## Case 1: Sample Data Example
+## Simulated Data Decomposition
 
 ```{r}
 library(ggplot2)
@@ -462,7 +484,7 @@ stsm_fc = merge(stsm_fc,
                 by = "date", all = TRUE)
 ```
 
-## Case 2: Real Data Examples
+## Real Data Decompositions
 
 ```{r}
 library(autostsm)
@@ -546,3 +568,76 @@ stsm_fc = merge(stsm_fc,
                 stsm_detect_breaks(stsm, y = SP500, plot = TRUE, show_progress = TRUE), 
                 by = "date", all = TRUE)
 ```
+
+## Simulated Data Interpolation Models
+
+```{r}
+library(autostsm)
+library(lubridate)
+
+#Rebuild the data
+set.seed(1024)
+ts = data.table(date = as.Date("2016-01-01") + 1:length(t), 
+                y = t*c*s*exp(rnorm(length(t), 0, sig_e)))
+
+#Convert the data to monthly by using the end of period
+ts[, "mnth" := floor_date(date, "month")]
+ts[, "rn" := .N:1, by = "mnth"]
+ts = ts[rn == 1, c("mnth", "y"), with = FALSE]
+colnames(ts)[colnames(ts) == "mnth"] = "date"
+
+#Get the quarter and set the date to be the end of the quarter
+ts[, "qtr" := ceiling_date(date, "quarter") %m-% months(1)]
+ts[, "y_avg" := frollmean(y, n = 3, align = "right")]
+ts[, "y_sum" := frollsum(y, n = 3, align = "right")]
+
+#We already know the data has a multiplicative structure with yearly seasonality and 
+#the frequency below will be set to quarterly, 
+#so we will set seasons = 4 and multiplicative to TRUE to help the model with identification
+#since the data set goes from 3000 daily observations to 99 monthly observations and then to
+#33 quarterly observations
+
+#End of period
+ts[, "rn" := .N:1, by = "qtr"]
+ts.eop = ts[rn == 1, ][, "rn" := NULL]
+stsm = stsm_estimate(y = ts.eop[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+                     interpolate = "monthly", interpolate_method = "eop", verbose = TRUE)
+stsm_fc = stsm_filter(stsm, y = ts.eop[, c("qtr", "y"), with = FALSE], plot = TRUE)
+stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")], 
+                ts[, c("date", "y")], by = "date", all.x = TRUE, all.y = TRUE)
+eop.err = cbind(method = "eop", stsm_fc[is.na(observed), .(mape = mean(abs(y - interpolated)/(1 + y)*100, na.rm = TRUE))])
+
+#Period average
+ts.avg = ts[, .(y = mean(y, na.rm = TRUE)), by = "qtr"]
+stsm = stsm_estimate(y = ts.avg[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+                     interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
+stsm_fc = stsm_filter(stsm, y = ts.avg[, c("qtr", "y"), with = FALSE], plot = TRUE)
+stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")], 
+                ts[, c("date", "y_avg")], by = "date", all.x = TRUE, all.y = TRUE)
+if(stsm$multiplicative == TRUE){
+  stsm_fc[, "interpolated" := exp(frollmean(log(interpolated), n = 3, align = "right"))]
+}else{
+  stsm_fc[, "interpolated" := frollmean(interpolated, n = 3, align = "right")]
+}
+avg.err = cbind(method = "avg", stsm_fc[is.na(observed), .(mape = mean(abs(y_avg - interpolated)/(1 + y_avg)*100, na.rm = TRUE))])
+
+#Period sum
+ts.sum = ts[, .(y = sum(y, na.rm = TRUE)), by = "qtr"]
+stsm = stsm_estimate(y = ts.sum[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+                     interpolate = "monthly", interpolate_method = "sum", verbose = TRUE)
+stsm_fc = stsm_filter(stsm, y = ts.sum[, c("qtr", "y"), with = FALSE], plot = TRUE)
+stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")], 
+                ts[, c("date", "y_sum")], by = "date", all.x = TRUE, all.y = TRUE)
+if(stsm$multiplicative == TRUE){
+  stsm_fc[, "interpolated" := exp(frollsum(log(interpolated), n = 3, align = "right"))]
+}else{
+  stsm_fc[, "interpolated" := frollsum(interpolated, n = 3, align = "right")]
+}
+sum.err = cbind(method = "sum", stsm_fc[is.na(observed), .(mape = mean(abs(y_sum - interpolated)/(1 + y_sum)*100, na.rm = TRUE))])
+
+#Errors depend on the volatility of the series
+#the end of period method is more susceptible to the volatility of the series than either
+#the average or sum methods
+rbind(eop.err, avg.err, sum.err)
+```
+

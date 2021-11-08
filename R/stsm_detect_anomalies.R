@@ -96,7 +96,7 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo = NULL,
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  B_tt = kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt
+  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt, type = "message")
   rownames(B_tt) = rownames(ssm$Fm)
   
   #Get the unobserved series

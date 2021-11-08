@@ -29,6 +29,8 @@ stsm_bdiag = function(A, B){
 #' @param seasons Numeric vector of seasonal frequencies. Only needed if prior needs to be built for initial values and prior = NULL
 #' @param cycle Numeric value for the cycle frequency. Only needed if prior needs to be built for initial values and prior = NULL
 #' @param model a stsm_estimate model object
+#' @param interpolate Character string of how to interpolate
+#' @param interpolate_method Character string for the method of interpolation
 #' @import data.table
 #' @return List of space space matrices
 #' @examples
@@ -47,7 +49,8 @@ stsm_bdiag = function(A, B){
 #' @export
 stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
                     trend = NULL, init = NULL, model = NULL, 
-                    prior = NULL, freq = NULL, seasons = NULL, cycle = NULL){
+                    prior = NULL, freq = NULL, seasons = NULL, cycle = NULL,
+                    interpolate = NULL, interpolate_method = NULL){
   if(!is.null(model)){
     par = eval(parse(text = paste0("c(", model$coef, ")")))
     trend = model$trend
@@ -55,6 +58,8 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     freq = model$freq
     seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
     cycle = model$cycle
+    interpolate = model$interpolate
+    interpolate_method = model$interpolate_method
   }
   
   #Bind data.table variables to the global environment
@@ -189,6 +194,48 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   #Observation equation error covariance matrix
   Rm = matrix(par["sig_e"]^2, nrow = 1, ncol = 1)
   
+  if(!is.null(interpolate)){
+    if(interpolate == "quarterly"){
+      int = 4
+    }else if(interpolate == "monthly"){
+      int = 12
+    }else if(interpolate == "weekly"){
+      int = 365.25/7
+    }else if(interpolate == "daily"){
+      int = 365.25
+    }
+    int_per = floor(int/freq)
+    rownames_int = paste0("It_", 0:(int_per - 1))
+    colnames_int =  paste0("It_", 1:int_per)
+    
+    #Define the transition equation intercept matrix
+    Dm = rbind(matrix(0, nrow = int_per, ncol = 1, dimnames = list(rownames_int, NULL)), 
+               Dm)
+    
+    #Define the transition equation matrix
+    Fm = rbind(matrix(0, nrow = int_per, ncol = ncol(Fm), dimnames = list(rownames_int, colnames(Fm))), 
+               Fm)
+    Fm = cbind(matrix(0, nrow = nrow(Fm), ncol = int_per, dimnames = list(rownames(Fm), colnames_int)), 
+               Fm)
+    Fm["It_0", gsub("_0", "_1", colnames(Hm)[Hm == 1])] = 1
+    diag(Fm[rownames(Fm)[rownames(Fm) %in% colnames(Fm)[grepl("It_", colnames(Fm))]], 
+            rownames(Fm)[rownames(Fm) %in% colnames(Fm)[grepl("It_", colnames(Fm))]]]) = 1
+    
+    #Define the transition error covariance matrix
+    Qm = rbind(matrix(0, nrow = int_per, ncol = ncol(Qm), dimnames = list(rownames_int, colnames(Qm))), 
+               Qm)
+    Qm = cbind(matrix(0, nrow = nrow(Qm), ncol = int_per, dimnames = list(rownames(Qm), rownames_int)), 
+               Qm)
+    
+    #Define the observation equation matrix
+    Hm = matrix(0, nrow = 1, ncol = int_per + ncol(Hm), dimnames = list(NULL, c(rownames_int, colnames(Hm))))
+    
+    #Define the observation error covariance matrix
+    Rm = matrix(0, nrow = nrow(Rm), ncol = ncol(Rm), dimnames = dimnames(Rm))
+  }else{
+    int_per = 1
+  }
+  
   #Initial guess for unobserved vector
   if(all(rownames(Fm)[grepl("_0", rownames(Fm))] %in% names(par))){
     B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
@@ -256,8 +303,21 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     rownames(P0) = colnames(P0) = rownames(Fm)
   }
   
-  ret = list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta)
+  if(!is.null(interpolate)){
+    if(interpolate_method == "eop"){
+      Hm[, "It_0"] = 1
+      B0["It_0", ] = c(yt)[1]
+    }else if(interpolate_method == "avg"){
+      Hm[, grepl("It_", colnames(Hm))] = 1/int_per
+      B0[grepl("It_", rownames(B0)), ] = c(yt)[1]
+    }else if(interpolate_method == "sum"){
+      Hm[, grepl("It_", colnames(Hm))] = 1
+      B0[grepl("It_", rownames(B0)), ] = c(yt)[1]/int_per
+    }
+    P0[grepl("It_", rownames(P0)), grepl("It_", colnames(P0))] = 0
+  }
+  
+  ret = list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta, int_per = int_per)
   return(ret)
 }
-
 

@@ -169,3 +169,72 @@ knitr::opts_chunk$set(
 #                  stsm_detect_breaks(stsm, y = SP500, plot = TRUE, show_progress = TRUE),
 #                  by = "date", all = TRUE)
 
+## -----------------------------------------------------------------------------
+#  library(autostsm)
+#  library(lubridate)
+#  
+#  #Rebuild the data
+#  set.seed(1024)
+#  ts = data.table(date = as.Date("2016-01-01") + 1:length(t),
+#                  y = t*c*s*exp(rnorm(length(t), 0, sig_e)))
+#  
+#  #Convert the data to monthly by using the end of period
+#  ts[, "mnth" := floor_date(date, "month")]
+#  ts[, "rn" := .N:1, by = "mnth"]
+#  ts = ts[rn == 1, c("mnth", "y"), with = FALSE]
+#  colnames(ts)[colnames(ts) == "mnth"] = "date"
+#  
+#  #Get the quarter and set the date to be the end of the quarter
+#  ts[, "qtr" := ceiling_date(date, "quarter") %m-% months(1)]
+#  ts[, "y_avg" := frollmean(y, n = 3, align = "right")]
+#  ts[, "y_sum" := frollsum(y, n = 3, align = "right")]
+#  
+#  #We already know the data has a multiplicative structure with yearly seasonality and
+#  #the frequency below will be set to quarterly,
+#  #so we will set seasons = 4 and multiplicative to TRUE to help the model with identification
+#  #since the data set goes from 3000 daily observations to 99 monthly observations and then to
+#  #33 quarterly observations
+#  
+#  #End of period
+#  ts[, "rn" := .N:1, by = "qtr"]
+#  ts.eop = ts[rn == 1, ][, "rn" := NULL]
+#  stsm = stsm_estimate(y = ts.eop[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+#                       interpolate = "monthly", interpolate_method = "eop", verbose = TRUE)
+#  stsm_fc = stsm_filter(stsm, y = ts.eop[, c("qtr", "y"), with = FALSE], plot = TRUE)
+#  stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")],
+#                  ts[, c("date", "y")], by = "date", all.x = TRUE, all.y = TRUE)
+#  eop.err = cbind(method = "eop", stsm_fc[is.na(observed), .(mape = mean(abs(y - interpolated)/(1 + y)*100, na.rm = TRUE))])
+#  
+#  #Period average
+#  ts.avg = ts[, .(y = mean(y, na.rm = TRUE)), by = "qtr"]
+#  stsm = stsm_estimate(y = ts.avg[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+#                       interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
+#  stsm_fc = stsm_filter(stsm, y = ts.avg[, c("qtr", "y"), with = FALSE], plot = TRUE)
+#  stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")],
+#                  ts[, c("date", "y_avg")], by = "date", all.x = TRUE, all.y = TRUE)
+#  if(stsm$multiplicative == TRUE){
+#    stsm_fc[, "interpolated" := exp(frollmean(log(interpolated), n = 3, align = "right"))]
+#  }else{
+#    stsm_fc[, "interpolated" := frollmean(interpolated, n = 3, align = "right")]
+#  }
+#  avg.err = cbind(method = "avg", stsm_fc[is.na(observed), .(mape = mean(abs(y_avg - interpolated)/(1 + y_avg)*100, na.rm = TRUE))])
+#  
+#  #Period sum
+#  ts.sum = ts[, .(y = sum(y, na.rm = TRUE)), by = "qtr"]
+#  stsm = stsm_estimate(y = ts.sum[, c("qtr", "y"), with = FALSE], seasons = 4, multiplicative = TRUE,
+#                       interpolate = "monthly", interpolate_method = "sum", verbose = TRUE)
+#  stsm_fc = stsm_filter(stsm, y = ts.sum[, c("qtr", "y"), with = FALSE], plot = TRUE)
+#  stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")],
+#                  ts[, c("date", "y_sum")], by = "date", all.x = TRUE, all.y = TRUE)
+#  if(stsm$multiplicative == TRUE){
+#    stsm_fc[, "interpolated" := exp(frollsum(log(interpolated), n = 3, align = "right"))]
+#  }else{
+#    stsm_fc[, "interpolated" := frollsum(interpolated, n = 3, align = "right")]
+#  }
+#  sum.err = cbind(method = "sum", stsm_fc[is.na(observed), .(mape = mean(abs(y_sum - interpolated)/(1 + y_sum)*100, na.rm = TRUE))])
+#  
+#  #Errors depend on the volatility of the series
+#  #the end of period method is more susceptible to the volatility of the series than either
+#  #the average or sum methods
+#  rbind(eop.err, avg.err, sum.err)
+

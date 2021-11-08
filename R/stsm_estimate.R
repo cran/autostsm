@@ -61,6 +61,9 @@
 #' @param verbose Logical whether to print messages or not
 #' @param unconstrained Logical whether to remove inequality constraints on the trend during estimation
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
+#' @param interpolate Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"
+#' @param interpolate_method Character string giving the interpolation method: 
+#' i.e. "eop" for end of period, "avg" for period average, or "sum" for period sum.
 #' @param cores Number of cores to use for seasonality and cycle detection
 #' @import data.table
 #' @useDynLib autostsm, .registration=TRUE
@@ -80,10 +83,10 @@
 #' }
 #' @export
 stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
-                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, cores = NULL,
+                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, interpolate = NULL, interpolate_method = NULL, cores = NULL, 
                          det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
                          sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE){
-  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = NULL
+  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = interpolate = interpolate_method = NULL
   #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
   #sig_level = 0.01
   #optim_methods = "BFGS"
@@ -132,6 +135,18 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       stop("freq must be numeric")
     }
   }
+  if(!is.null(interpolate)){
+    if(!interpolate %in% c("quarterly", "monthly", "weekly", "daily")){
+      stop("interpolate must be one of quarterly, monthly, weekly, daily")
+    }
+  }
+  if(!is.null(interpolate_method)){
+    if(!interpolate_method %in% c("eop", "avg", "sum")){
+      stop("interpolate must be one of eop, avg, sum")
+    }
+  }else if(is.null(interpolate_method) & !is.null(interpolate)){
+    stop("interpolate_method must be specified if interpolate is not NULL")
+  }
   if(!is.null(cores)){
     if(cores > parallel::detectCores()){
       cores = parallel::detectCores()
@@ -156,6 +171,43 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   dates = dates[range[1]:range[length(range)]]
   exo = stsm_format_exo(exo, dates, range)
   
+  #Interpolate dates
+  if(!is.null(interpolate)){
+    if(freq == "quarterly"){
+      if(!interpolate %in% c("monthly", "weekly", "daily")){
+        stop("interpolate must be a frequency higher than the data")
+      }
+    }else if(freq == "monthly"){
+      if(!interpolate %in% c("weekly", "daily")){
+        stop("interpolate must be a frequency higher than the data")
+      }
+    }else if(freq == "weekly"){
+      if(!interpolate %in% c("daily")){
+        stop("interpolate must be a frequency higher than the data")
+      }
+    }else if(freq == "daily"){
+      stop("interpolate is only implemented for frequencies lower than daily")
+    }
+    
+    y = stsm_dates_to_interpolate(y = y, dates = dates, exo = exo, interpolate = interpolate)
+    dates = y$dates
+    exo = y$exo
+    y = y$y
+    
+    if(interpolate == "quarterly"){
+      int = 4
+    }else if(interpolate == "monthly"){
+      int = 12
+    }else if(interpolate == "weekly"){
+      int = 365.25/7
+    }else if(interpolate == "daily"){
+      int = 365.25
+    }
+    int_per = int/freq
+  }else{
+    int_per = 1
+  }
+  
   #Set up parallel computing
   if(is.null(cores)){
     cores = parallel::detectCores()
@@ -177,7 +229,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   }
   
   #Set the prior
-  prior = stsm_prior(y, freq)
+  prior = stsm_prior(y, freq*int_per)
   
   #Detect seasonality
   if(is.null(seasons) & ifelse(!is.null(decomp), grepl("seasonal", decomp), TRUE)){
@@ -188,6 +240,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   }
   if(is.null(seasons) | all(seasons == FALSE)){
     seasons = numeric(0)
+  }
+  if(!is.null(interpolate)){
+    seasons = seasons*int_per
   }
   
   #Detect cycle
@@ -200,10 +255,13 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   if(is.null(cycle) | all(cycle == FALSE)){
     cycle = numeric(0)
   }
+  if(!is.null(interpolate)){
+    cycle = cycle*int_per
+  }
   
   #Reset the prior
   if(length(seasons) > 0 | length(cycle) > 0){
-    prior = stsm_prior(y, freq, seasons = seasons, cycle = cycle)
+    prior = stsm_prior(y, freq*int_per, seasons = seasons, cycle = cycle)
   }
   
   #Detect multiplicative model
@@ -215,7 +273,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   }
   if(multiplicative == TRUE){
     y = log(y)
-    prior = stsm_prior(y, freq, seasons = seasons, cycle = cycle)
+    prior = stsm_prior(y, freq*int_per, seasons = seasons, cycle = cycle)
   }
   
   #Detect trend type
@@ -263,11 +321,11 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   mean = mean(y, na.rm = TRUE)
   sd = stats::sd(y, na.rm = TRUE)
   y = (y - mean)/sd
-  prior = stsm_prior(y, freq, decomp, seasons, cycle)
+  prior = stsm_prior(y, freq*int_per, decomp, seasons, cycle)
   
   #Set the initial parameter values
   if(is.null(par)){
-    par = stsm_init_pars(y, freq, trend, cycle, decomp, seasons, prior, sig_level)
+    par = stsm_init_pars(y, freq*int_per, trend, cycle, decomp, seasons, prior, sig_level)
   }
   
   #Set any fixed parameters
@@ -278,9 +336,15 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   fixed = fixed[["fixed"]]
   
   ###### Initial values for the unobserved components #####
-  ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, seasons = seasons)
+  ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, freq = freq, seasons = seasons, 
+                 interpolate = interpolate, interpolate_method = interpolate_method)
+  par = c(par, P0 = stats::var(y, na.rm = TRUE)) #Set uncertainty to be the rescaled variance of the time series
   init = ssm[c("B0", "P0")]
-  par = c(par, P0 = stats::var(y, na.rm = T)) #Set uncertainty to be the rescaled variance of the time series
+  if(!is.null(interpolate)){
+    par["sig_e"] = 0
+    fixed = c(fixed, "sig_e")
+    det_obs = TRUE
+  }
   
   ##### Inequality constraints: ineqA %*% par + ineqB > 0 => ineqA %*% par > -ineqB #####
   constraints = stsm_constraints(prior, par, freq, unconstrained, det_trend, det_drift, det_cycle, det_seas, det_obs, saturating_growth)
@@ -289,8 +353,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Test that constraints hold for initial parameter values: constraints[[1]] %*% matrix(par, ncol = 1) > -constraints[[2]]
   
   #Define the objective function
-  objective = function(par, yt, freq, decomp, trend, init){
-    ssm = stsm_ssm(par, yt, decomp, trend, init)
+  objective = function(par, yt, freq, decomp, trend, init, interpolate, interpolate_method){
+    ssm = stsm_ssm(par, yt, decomp, trend, init, freq = freq, 
+                   interpolate = interpolate, interpolate_method = interpolate_method)
     ans = kalman_filter(ssm, yt, X, smooth = FALSE)
     return(ans$loglik)
   }
@@ -303,8 +368,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     out = tryCatch(maxLik::maxLik(logLik = objective,
                                   start = par, method = o, fixed = fixed,
                                   finalHessian = FALSE, hess = NULL, control = list(printLevel = ifelse(verbose == TRUE, 2, 0), iterlim = maxit),
-                                  constraints = constraints,
-                                  yt = matrix(y, nrow = 1), freq = freq, decomp = decomp, trend = trend, init = init),
+                                  constraints = constraints, 
+                                  yt = matrix(y, nrow = 1), freq = freq, decomp = decomp, trend = trend, init = init,
+                                  interpolate = interpolate, interpolate_method = interpolate_method),
                    error = function(err){NULL})
     if(!is.null(out)){
       break
@@ -330,6 +396,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                     seasons = paste(seasons, collapse = ", "),
                                     cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
                                     decomp = decomp, multiplicative = multiplicative, 
+                                    interpolate = interpolate, interpolate_method = interpolate_method,
                                     convergence = (out$code == 0), 
                                     loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
                                     AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),

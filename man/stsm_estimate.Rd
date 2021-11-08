@@ -16,6 +16,8 @@ stsm_estimate(
   par = NULL,
   seasons = NULL,
   cycle = NULL,
+  interpolate = NULL,
+  interpolate_method = NULL,
   cores = NULL,
   det_obs = FALSE,
   det_trend = NULL,
@@ -68,6 +70,11 @@ Can set to FALSE if want no seasonality}
 
 \item{cycle, }{The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
 Can set to FALSE if want no cycle.}
+
+\item{interpolate}{Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"}
+
+\item{interpolate_method}{Character string giving the interpolation method: 
+i.e. "eop" for end of period, "avg" for period average, or "sum" for period sum.}
 
 \item{cores}{Number of cores to use for seasonality and cycle detection}
 

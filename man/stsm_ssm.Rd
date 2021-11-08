@@ -14,7 +14,9 @@ stsm_ssm(
   prior = NULL,
   freq = NULL,
   seasons = NULL,
-  cycle = NULL
+  cycle = NULL,
+  interpolate = NULL,
+  interpolate_method = NULL
 )
 }
 \arguments{
@@ -41,6 +43,10 @@ stsm_ssm(
 \item{seasons}{Numeric vector of seasonal frequencies. Only needed if prior needs to be built for initial values and prior = NULL}
 
 \item{cycle}{Numeric value for the cycle frequency. Only needed if prior needs to be built for initial values and prior = NULL}
+
+\item{interpolate}{Character string of how to interpolate}
+
+\item{interpolate_method}{Character string for the method of interpolation}
 }
 \value{
 List of space space matrices
