@@ -1,8 +1,8 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 2.0
-Date: 2021-11-01
+Version: 2.1
+Date: 2021-12-01
 Author: Alex Hubbard
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Description: Automatic model selection for structural time series decomposition into trend, cycle, and seasonal components, plus optionality for structural interpolation, using the Kalman filter. 
@@ -12,14 +12,13 @@ License: GPL (>= 2)
 Imports: maxLik (>= 1.5), forecast (>= 8.15), lubridate (>= 1.7),
         ggplot2 (>= 3.3), gridExtra (>= 2.3), strucchange (>= 1.5),
         foreach (>= 1.5), doSNOW (>= 1.0), parallel (>= 4.1), lmtest
-        (>= 0.9), ggrepel(>= 0.9), progress (>= 1.2), sandwich (>=
-        3.0),
+        (>= 0.9), ggrepel(>= 0.9), progress (>= 1.2), sandwich (>= 3.0)
 Depends: R (>= 3.5.0), data.table (>= 1.14)
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.2
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2021-11-08 00:51:03 UTC; alex.hubbard
+Packaged: 2021-11-15 17:58:01 UTC; alex.hubbard
 Repository: CRAN
-Date/Publication: 2021-11-08 07:50:11 UTC
+Date/Publication: 2021-12-02 08:50:08 UTC

@@ -9,6 +9,7 @@ stsm_detect_seasonality(
   freq,
   sig_level = 0.01,
   prior = NULL,
+  interpolate = NA,
   cl = NULL,
   cores = NULL,
   show_progress = FALSE
@@ -22,6 +23,8 @@ stsm_detect_seasonality(
 \item{sig_level}{Significance level to determine statistically significant seasonal frequencies}
 
 \item{prior}{A data table created from stsm_prior}
+
+\item{interpolate}{Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"}
 
 \item{cl}{a parallel cluster object}
 

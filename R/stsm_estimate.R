@@ -19,8 +19,10 @@
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
 #' @param seasons The seasonal periods: i.e. c(365.25, 7 if yearly and weekly seasonality). Default is NULL and will be estimated via wavelet analysis. 
 #' Can set to FALSE if want no seasonality
-#' @param cycle, The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
-#' Can set to FALSE if want no cycle.
+#' @param cycle, The period for the longer-term cycle. Default is NULL and will be estimated via wavelet analysis.
+#' Can set to FALSE if want no cycle, "trig" for trigonometric specification only, or "arma" for ARMA(p,q) specification only. 
+#' @param arma Named vector with values for p and q corresponding to the ARMA(p,q) specification if
+#' cycle is set to 'arma'. If NA, then will auto-select the order.
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
 #' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likelihood.
 #' "random-walk" is the random walk trend.
@@ -56,8 +58,11 @@
 #' If det_drift = TRUE then the error variance of the drift equation (sig_d) is set to 0 and 
 #' is refereed to as a deterministic drift
 #' @param maxit Maximum number of iterations for the optimization
-#' @param par Initial parameters, default is NULL
-#' @param sig_level Significance level to determine statistically significant seasonal frequencies
+#' @param par Initial parameters, default is NULL and will auto-select them
+#' @param sig_level Significance level to determine statistically significance for all tests. Default is 0.01
+#' @param sig_level_seas Significance level to determine statistically significant seasonal frequencies. Default is 0.01
+#' @param sig_level_cycle Significance level to determine a statistically significant cycle frequency. Default is 0.01
+#' @param sig_level_trend Significance level to determine statistically significant order of integration. Default is 0.01
 #' @param verbose Logical whether to print messages or not
 #' @param unconstrained Logical whether to remove inequality constraints on the trend during estimation
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
@@ -83,12 +88,14 @@
 #' }
 #' @export
 stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
-                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, interpolate = NULL, interpolate_method = NULL, cores = NULL, 
+                         multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, arma = c(p = NA, q = NA), interpolate = NA, interpolate_method = NA,
                          det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
-                         sig_level = 0.01, optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE){
-  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = interpolate = interpolate_method = NULL
+                         sig_level = NULL, sig_level_seas = NULL, sig_level_cycle = NULL, sig_level_trend = NULL, 
+                         optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE, cores = NULL){
+  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = sig_level = sig_level_seas = sig_level_trend = sig_level_cycle = NULL
+  #interpolate = interpolate_method = NA
   #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
-  #sig_level = 0.01
+  #arma = c(p = NA, q = NA)
   #optim_methods = "BFGS"
   #maxit = 10000
   #verbose = TRUE
@@ -96,11 +103,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #   tryCatch(source(i), error = function(err){NULL})
   # }
   # Rcpp::sourceCpp("src/kalmanfilter.cpp")
-  
+
   #Argument checks
-  if(sig_level <= 0 | sig_level > 0.1){
-    stop("sig_level must be > 0 and <= 0.1.")
-  }
   if(any(!optim_methods %in% c("NR", "BFGS", "BHHH", "SANN", "CG", "NM")) | length(optim_methods) < 1){
     stop("optim_methods must be a vector containing 'NR', 'BFGS', 'BHHH', 'SANN', 'CG', and/or 'NM'")
   }
@@ -123,28 +127,38 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     }
   }
   if(!is.null(cycle)){
-    if(!(is.logical(cycle) | is.numeric(cycle))){
-      stop("cycle must be NULL, a numeric vector of length 1, or logical")
+    if(!(is.logical(cycle) | is.numeric(cycle) | is.character(cycle))){
+      stop("cycle must be NULL, logical, a string equal to 'arma' or 'trig', or a numeric vector of length 1.")
     }
     if(length(cycle) > 1){
       stop("cycle can only a numeric vector of length 1")
     }
+    if(is.character(cycle)){
+      if(!cycle %in% c("arma", "trig")){
+        stop("if cycle is a string, it must be 'arma' or 'trig'")
+      }
+    }
+  }
+  if(!is.vector(arma) | !all(c("p", "q") %in% names(arma)) |
+     !all(names(arma) %in% c("p", "q")) | 
+     ifelse(!all(sapply(arma, is.na)), !all("numeric" == sapply(arma, class)), FALSE)){
+    stop("arma must be a vector with names 'p' and 'q' with numeric values")
   }
   if(!is.null(freq)){
     if(!is.numeric(freq)){
       stop("freq must be numeric")
     }
   }
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     if(!interpolate %in% c("quarterly", "monthly", "weekly", "daily")){
       stop("interpolate must be one of quarterly, monthly, weekly, daily")
     }
   }
-  if(!is.null(interpolate_method)){
+  if(!is.na(interpolate_method)){
     if(!interpolate_method %in% c("eop", "avg", "sum")){
       stop("interpolate must be one of eop, avg, sum")
     }
-  }else if(is.null(interpolate_method) & !is.null(interpolate)){
+  }else if(is.na(interpolate_method) & !is.na(interpolate)){
     stop("interpolate_method must be specified if interpolate is not NULL")
   }
   if(!is.null(cores)){
@@ -152,6 +166,19 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       cores = parallel::detectCores()
       message("cores was set to be more than the available number of cores on the machine. Setting 'cores' to parallel::detectCores().")
     }
+  }
+  if(!is.null(sig_level)){
+    if(sig_level <= 0 | sig_level > 0.1){
+      stop("sig_level must be > 0 and <= 0.1.")
+    }
+    sig_level_seas = ifelse(!is.null(sig_level_seas), sig_level_seas, sig_level)
+    sig_level_cycle = ifelse(!is.null(sig_level_cycle), sig_level_cycle, sig_level)
+    sig_level_trend = ifelse(!is.null(sig_level_trend), sig_level_trend, sig_level)
+  }else{
+    sig_level = 0.01
+    sig_level_seas = ifelse(!is.null(sig_level_seas), sig_level_seas, sig_level)
+    sig_level_cycle = ifelse(!is.null(sig_level_cycle), sig_level_cycle, sig_level)
+    sig_level_trend = ifelse(!is.null(sig_level_trend), sig_level_trend, sig_level)
   }
   stsm_check_y(y)
   stsm_check_exo(exo, y)
@@ -172,7 +199,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   exo = stsm_format_exo(exo, dates, range)
   
   #Interpolate dates
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     if(freq == "quarterly"){
       if(!interpolate %in% c("monthly", "weekly", "daily")){
         stop("interpolate must be a frequency higher than the data")
@@ -236,26 +263,33 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     if(verbose == TRUE){
       message("Checking for seasonality...")
     }
-    seasons = stsm_detect_seasonality(y, freq, sig_level, prior, cl, cores, show_progress = verbose)
+    seasons = stsm_detect_seasonality(y, freq, sig_level_seas, prior, interpolate, cl, cores, show_progress = verbose)
   }
   if(is.null(seasons) | all(seasons == FALSE)){
     seasons = numeric(0)
   }
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     seasons = seasons*int_per
   }
   
   #Detect cycle
-  if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE) & length(y) >= 3*freq){
+  user_set_cycle = cycle
+  if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp) | cycle == "trig", TRUE) & length(y) >= 3*freq){
     if(verbose == TRUE){
-      message("Checking for a cycle...")
+      message("Checking for a trigonometric cycle...")
     }
-    cycle = stsm_detect_cycle(y, freq, sig_level, prior, cl , cores, show_progress = verbose)
+    trig = ifelse(!is.null(cycle), cycle == "trig", FALSE)
+    cycle = stsm_detect_cycle(y, freq, sig_level_cycle, prior, interpolate, cl, cores, show_progress = verbose)
+    if(length(cycle) == 0 & is.null(user_set_cycle)){
+      cycle = "arma"
+    }
+  }else if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE)){
+    cycle = "arma"
   }
   if(is.null(cycle) | all(cycle == FALSE)){
     cycle = numeric(0)
   }
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate) & is.numeric(cycle)){
     cycle = cycle*int_per
   }
   
@@ -264,12 +298,29 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     prior = stsm_prior(y, freq*int_per, seasons = seasons, cycle = cycle)
   }
   
+  #Check for stationarity of an ARMA cycle
+  if(ifelse(length(cycle) > 0, cycle == "arma", TRUE) & is.null(user_set_cycle)){
+    if(verbose == TRUE){
+      message("Checking for a stationary cycle...")
+    }
+    maxlags = max(c(trunc(12*(length(stats::na.omit(y))/100)^(1/4)), #Schwert method
+                    trunc((length(stats::na.omit(y)) - 1)^(1/3)))) #arma method
+    ndiffs = c(forecast::ndiffs(stats::na.omit(y - prior$seasonal - prior$trend), test = "adf", type = "level", alpha = sig_level_trend, max.d = 2, lags = maxlags, selectlags = "BIC"), 
+      forecast::ndiffs(stats::na.omit(y - prior$seasonal - prior$trend), test = "pp", type = "level", alpha = sig_level_trend, max.d = 2, lags = "long"), 
+      forecast::ndiffs(stats::na.omit(y - prior$seasonal - prior$trend), test = "kpss", type = "level", alpha = sig_level_trend, max.d = 2, lags = "long"))
+    ndiffs = round(mean(ndiffs, na.rm = TRUE))
+    if(ndiffs > 0){
+      cycle = numeric(0)
+      prior = stsm_prior(y, freq*int_per, seasons = seasons, cycle = cycle)
+    }
+  }
+  
   #Detect multiplicative model
   if(is.null(multiplicative)){
     if(verbose == TRUE){
       message("Checking for a multiplicative model...")
     }
-    multiplicative = stsm_detect_multiplicative(y, freq, sig_level, prior)
+    multiplicative = stsm_detect_multiplicative(y, freq, sig_level_trend, prior)
   }
   if(multiplicative == TRUE){
     y = log(y)
@@ -281,7 +332,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     if(verbose == TRUE){
       message("Selecting the trend type...")
     }
-    trend = stsm_detect_trend(y, freq, sig_level = sig_level, prior = prior, seasons = seasons, cycle = cycle)
+    trend = stsm_detect_trend(y, freq, sig_level = sig_level_trend, prior = prior, seasons = seasons, cycle = cycle, 
+                              cl = cl, cores = cores, verbose = verbose)
     if(is.null(det_trend)){
       det_trend = trend$det_trend
     }
@@ -294,22 +346,22 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Assign the decomposition
   if(is.null(decomp)){
     decomp = "trend"
-    if(length(seasons) > 0){
-      decomp = paste0(decomp, "-seasonal")
-    }
     if(length(cycle) > 0){
       decomp = paste0(decomp, "-cycle")
+    }
+    if(length(seasons) > 0){
+      decomp = paste0(decomp, "-seasonal")
     }
   }
   
   #Remove seasonal and cycle from decomp if harmonics and cycle are missing
-  if(grepl("seasonal", decomp) & (is.null(seasons) | length(seasons) == 0)){
-    decomp = strsplit(decomp, "-")[[1]]
-    decomp = paste(decomp[decomp != "seasonal"], collapse = "-")
-  }
   if(grepl("cycle", decomp) & (is.null(cycle) | length(cycle) == 0)){
     decomp = strsplit(decomp, "-")[[1]]
     decomp = paste(decomp[decomp != "cycle"], collapse = "-")
+  }
+  if(grepl("seasonal", decomp) & (is.null(seasons) | length(seasons) == 0)){
+    decomp = strsplit(decomp, "-")[[1]]
+    decomp = paste(decomp[decomp != "seasonal"], collapse = "-")
   }
   
   #If no seasonality or cycle detected, include noise component only
@@ -325,7 +377,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   
   #Set the initial parameter values
   if(is.null(par)){
-    par = stsm_init_pars(y, freq*int_per, trend, cycle, decomp, seasons, prior, sig_level)
+    par = stsm_init_pars(y, freq*int_per, trend, cycle, decomp, seasons, prior, sig_level, 
+                         arma, interpolate)
   }
   
   #Set any fixed parameters
@@ -334,13 +387,16 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   par = fixed[["par"]]
   X = fixed[["X"]]
   fixed = fixed[["fixed"]]
+  if(is.numeric(user_set_cycle)){
+    fixed = c(fixed, "lambda")
+  }
   
   ###### Initial values for the unobserved components #####
   ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, freq = freq, seasons = seasons, 
                  interpolate = interpolate, interpolate_method = interpolate_method)
   par = c(par, P0 = stats::var(y, na.rm = TRUE)) #Set uncertainty to be the rescaled variance of the time series
   init = ssm[c("B0", "P0")]
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     par["sig_e"] = 0
     fixed = c(fixed, "sig_e")
     det_obs = TRUE
@@ -381,7 +437,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   if(is.null(out)){
     stop("Estimation failed.")
   }
-  
+    
   #Stop the cluster
   if(!is.null(cl)){
     parallel::stopCluster(cl)
@@ -402,6 +458,12 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                     AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),
                                     coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
   ))
+  # if(multiplicative == T){
+  #   y = exp(y[!is.na(y)]*sd + mean)
+  #}else{
+  #   y = y[!is.na(y)]*sd + mean
+  # }
+  # stsm_fc = stsm_filter(fit, y = data.table(date = dates[!is.na(y)], y = y), plot = TRUE, smooth = F)
   return(fit)
 }
 

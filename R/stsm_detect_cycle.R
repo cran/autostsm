@@ -3,6 +3,7 @@
 #' @param y Univariate time series of data values.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily))
 #' @param sig_level Significance level to determine statistically significant seasonal frequencies
+#' @param interpolate Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"
 #' @param cores Number of cores to use
 #' @param show_progress Whether to show progress bar
 #' @param prior A data table created by stsm_prior
@@ -23,6 +24,7 @@
 #' }
 #' @export
 stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL, 
+                             interpolate = NA, 
                              cl = NULL, cores = NULL, show_progress = FALSE){
   #Bind data.table variables to the global environment
   seasonal = trend = fstat = pval = NULL
@@ -36,11 +38,15 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
   
   #Redefine the cycle value
   prior[, "cycle" := y - trend]
-  if(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$cycle, replace.missing = FALSE)), 
-                    type = "deviation")$p.value <= sig_level){
+  if(round(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$cycle, replace.missing = FALSE)), 
+                    type = "deviation")$p.value, 2) <= sig_level){
     prior[, "cycle" := y/trend]
   }
-  prior[, "t" := 1:.N]
+  if(is.na(interpolate)){
+    prior[, "t" := 1:.N]
+  }else{
+    prior[!is.na(y), "t" := 1:.N]
+  }
   
   #Setup parallel computing
   harmonics = seq(0.01, 0.99, by = 0.01)
@@ -105,7 +111,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
     }
     
     #Find the maxima
-    cycle = wave[which.max(fstat), ][pval <= sig_level, ]$period
+    cycle = wave[which.max(fstat), ][round(pval, 2) <= sig_level, ]$period
     
     #Check the final harmonic specification
     if(length(cycle) > 0){
@@ -124,7 +130,7 @@ stsm_detect_cycle = function(y, freq, sig_level = 0.01, prior = NULL,
                                                            df1 = summary(lm)$fstatistic["numdf"], 
                                                            df2 = summary(lm)$fstatistic["dendf"])))
                       })
-     if(final_ftest$`Pr(>F)`[2] > sig_level){
+     if(round(final_ftest$`Pr(>F)`[2], 2) > sig_level){
         cycle = numeric(0)
       }
     }else{

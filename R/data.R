@@ -33,6 +33,13 @@
 #' @usage data(GDP)
 "GDP"
 
+#' 5 Year Treasury Yield
+#' 
+#' @format data.table with columns DATE and DGS5, monthly frequency
+#' @source FRED
+#' @usage data(DGS5)
+"DGS5"
+
 #' #' Stock & Watson US Dynamic Common Factor (1991) Data
 #' #' 
 #' #' @format data.table with columns date, ip (industrial production), 

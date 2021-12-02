@@ -36,7 +36,7 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
       #Remove outliers for sensitivity
       prior[, "seasonal2" := y - trend - cycle]
       prior[, "seasonal2" := forecast::tsclean(seasonal2, replace.missing = FALSE)]
-      multiplicative = (multiplicative | stsm_coxstuart(stats::na.omit(prior$seasonal2), type = "deviation")$p.value <= sig_level)
+      multiplicative = (multiplicative | round(stsm_coxstuart(stats::na.omit(prior$seasonal2), type = "deviation")$p.value, 2) <= sig_level)
       prior[, "seasonal2" := NULL]
     }
     
@@ -45,7 +45,7 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
       #Remove outliers for sensitivity
       prior[, "cycle2" := y - trend - seasonal]
       prior[, "cycle2" := forecast::tsclean(cycle2, replace.missing = FALSE)]
-      multiplicative = (multiplicative | stsm_coxstuart(stats::na.omit(prior$cycle2), type = "deviation")$p.value <= sig_level)
+      multiplicative = (multiplicative | round(stsm_coxstuart(stats::na.omit(prior$cycle2), type = "deviation")$p.value, 2) <= sig_level)
       prior[, "cycle2" := NULL]
     }
     
@@ -60,7 +60,7 @@ stsm_detect_multiplicative = function(y, freq, sig_level = 0.01, prior = NULL){
     lm_log = stats::update(lm_lin, log(seasonal_adj) ~ t)
     stat = lmtest::petest(lm_lin, lm_log, vcov. = sandwich::vcovHAC)$`Pr(>|t|)`
     #To select log model, the linear model must be rejected while the log model must fail to be rejected
-    multiplicative = (multiplicative | (stat[1] <= sig_level & stat[2] > sig_level))
+    multiplicative = (multiplicative | (round(stat[1], 2) <= sig_level & round(stat[2], 2) > sig_level))
     prior[, "seasonal_adj" := NULL]
   }
   return(multiplicative)

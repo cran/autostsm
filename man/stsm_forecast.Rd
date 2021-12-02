@@ -48,7 +48,8 @@ stsm_forecast(
 
 \item{dampen_cycle}{Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence}
 
-\item{envelope_ci}{Whether to create a envelope for the confidence interval to smooth out seasonal fluctuations}
+\item{envelope_ci}{Whether to create a envelope for the confidence interval to smooth out seasonal fluctuations
+to the longest seasonal period}
 }
 \value{
 data table (or list of data tables) containing the filtered and/or smoothed series.

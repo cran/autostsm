@@ -16,18 +16,22 @@ stsm_estimate(
   par = NULL,
   seasons = NULL,
   cycle = NULL,
-  interpolate = NULL,
-  interpolate_method = NULL,
-  cores = NULL,
+  arma = c(p = NA, q = NA),
+  interpolate = NA,
+  interpolate_method = NA,
   det_obs = FALSE,
   det_trend = NULL,
   det_seas = FALSE,
   det_drift = FALSE,
   det_cycle = FALSE,
-  sig_level = 0.01,
+  sig_level = NULL,
+  sig_level_seas = NULL,
+  sig_level_cycle = NULL,
+  sig_level_trend = NULL,
   optim_methods = c("BFGS", "NM", "CG", "SANN"),
   maxit = 10000,
-  verbose = FALSE
+  verbose = FALSE,
+  cores = NULL
 )
 }
 \arguments{
@@ -63,20 +67,21 @@ e_t ~ N(0, sig_t^2)}
 If multiplicative = TRUE, then the data is logged and the original model becomes multiplicative 
 (Y_t = T_t * C_t * S_t * BX_t * e_t)}
 
-\item{par}{Initial parameters, default is NULL}
+\item{par}{Initial parameters, default is NULL and will auto-select them}
 
 \item{seasons}{The seasonal periods: i.e. c(365.25, 7 if yearly and weekly seasonality). Default is NULL and will be estimated via wavelet analysis. 
 Can set to FALSE if want no seasonality}
 
-\item{cycle, }{The period for the longer-term cycle. Deafult is NULL and will be estimated via wavelet analysis.
-Can set to FALSE if want no cycle.}
+\item{cycle, }{The period for the longer-term cycle. Default is NULL and will be estimated via wavelet analysis.
+Can set to FALSE if want no cycle, "trig" for trigonometric specification only, or "arma" for ARMA(p,q) specification only.}
+
+\item{arma}{Named vector with values for p and q corresponding to the ARMA(p,q) specification if
+cycle is set to 'arma'. If NA, then will auto-select the order.}
 
 \item{interpolate}{Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"}
 
 \item{interpolate_method}{Character string giving the interpolation method: 
 i.e. "eop" for end of period, "avg" for period average, or "sum" for period sum.}
-
-\item{cores}{Number of cores to use for seasonality and cycle detection}
 
 \item{det_obs}{Set the observation equation error variance to 0 (deterministic observation equation)
 If det_obs = TRUE then the error variance of the observation equation (sig_e) is set to 0}
@@ -97,13 +102,21 @@ is refereed to as a deterministic drift}
 If det_cycle = TRUE then the error variance of the cycle equation (sig_c) is set to 0 and 
 is referred to as a deterministic cycle}
 
-\item{sig_level}{Significance level to determine statistically significant seasonal frequencies}
+\item{sig_level}{Significance level to determine statistically significance for all tests. Default is 0.01}
+
+\item{sig_level_seas}{Significance level to determine statistically significant seasonal frequencies. Default is 0.01}
+
+\item{sig_level_cycle}{Significance level to determine a statistically significant cycle frequency. Default is 0.01}
+
+\item{sig_level_trend}{Significance level to determine statistically significant order of integration. Default is 0.01}
 
 \item{optim_methods}{Vector of 1 to 3 optimization methods in order of preference ("NR", "BFGS", "CG", "BHHH", or "SANN")}
 
 \item{maxit}{Maximum number of iterations for the optimization}
 
 \item{verbose}{Logical whether to print messages or not}
+
+\item{cores}{Number of cores to use for seasonality and cycle detection}
 }
 \value{
 List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification

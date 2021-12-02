@@ -11,7 +11,10 @@ stsm_detect_trend(
   sig_level = 0.01,
   prior = NULL,
   seasons = NULL,
-  cycle = NULL
+  cycle = NULL,
+  cl = NULL,
+  cores = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -28,6 +31,12 @@ stsm_detect_trend(
 \item{seasons}{The seasonal periods}
 
 \item{cycle}{The cycle period}
+
+\item{cl}{a parallel cluster object}
+
+\item{cores}{Number of cores to use}
+
+\item{verbose}{Logical whether to print messages or not}
 }
 \value{
 list with trend type and logical flag for deterministic trend if the trend is determined to have 0 differencing

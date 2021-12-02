@@ -3,6 +3,7 @@
 #' @param y Univariate time series of data values.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily))
 #' @param sig_level Significance level to determine statistically significant seasonal frequencies
+#' @param interpolate Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"
 #' @param prior A data table created from stsm_prior
 #' @param cores Number of cores to use
 #' @param cl a parallel cluster object
@@ -23,6 +24,7 @@
 #' }
 #' @export
 stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL, 
+                                   interpolate = NA,
                                    cl = NULL, cores = NULL, show_progress = FALSE){
   #Bind data.table variables to the global environment
   s = seasons = round = period = period2 = test = frequency = frequency2 = 
@@ -42,11 +44,15 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
   
   #Adjust the seasonal value
   prior[, "seasonal" := y - trend]
-  if(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$seasonal, replace.missing = FALSE)), 
-                    type = "deviation")$p.value <= sig_level){
+  if(round(stsm_coxstuart(stats::na.omit(forecast::tsclean(prior$seasonal, replace.missing = FALSE)), 
+                    type = "deviation")$p.value, 2) <= sig_level){
     prior[, "seasonal" := y/trend]
   }
-  prior[, "t" := 1:.N]
+  if(is.na(interpolate)){
+    prior[, "t" := 1:.N]
+  }else{
+    prior[!is.na(y), "t" := 1:.N]
+  }
   
   #Wavelet analysis for seasonality using forward stepwise regression
   if(floor(freq) == floor(60*60*24*365.25)){
@@ -181,7 +187,7 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
       return(data.table(frequency = i/freq, period = freq/i, fstat = summary(lm)$fstatistic["value"], pval = pval))
     }
     wave[, "df" := unique(signif(diff(frequency)))[1]]
-    seasons = wave[pval <= sig_level, ]
+    seasons = wave[round(pval, 2) <= sig_level, ]
     
     if(nrow(seasons) > 0){
       #Assign the closest value in the predefined spectrum
@@ -242,19 +248,19 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
         }
         
         #Remove insignificant seasonalities
-        if(nrow(f_tests[pval > sig_level, ]) > 0){
-          cols = unlist(lapply(f_tests[pval > sig_level, ]$season, function(x){paste0(c("sin", "cos"), x)}))
+        if(nrow(f_tests[round(pval, 2) > sig_level, ]) > 0){
+          cols = unlist(lapply(f_tests[round(pval, 2) > sig_level, ]$season, function(x){paste0(c("sin", "cos"), x)}))
           prior[, c(cols) := NULL]
         }
         
         #If no seasonalities are significant or all seasonalities are significant, stop the loop
         if(length(colnames(prior)[grepl("sin|cos", colnames(prior))]) == 0 |
-           nrow(f_tests[pval > sig_level, ]) == 0){
+           nrow(f_tests[round(pval, 2) > sig_level, ]) == 0){
           go = FALSE
         }
       }
       
-      if(nrow(f_tests[pval <= sig_level, ]) > 0){    
+      if(nrow(f_tests[round(pval, 2) <= sig_level, ]) > 0){    
         #Calculate robust F-test for the final specification
         lm = stats::lm(seasonal ~ ., prior[, c("seasonal", colnames(prior)[grepl("sin|cos", colnames(prior))]), with = FALSE])
         lm_res = stats::lm(seasonal ~ 1, prior)
@@ -265,8 +271,8 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
                                                     df2 = summary(lm)$fstatistic["dendf"])))
                         })
         
-        if(final_ftest$`Pr(>F)`[2] <= sig_level){
-          seasons = unique(as.numeric(f_tests[pval <= sig_level, ]$season))
+        if(round(final_ftest$`Pr(>F)`[2], 2) <= sig_level){
+          seasons = unique(as.numeric(f_tests[round(pval, 2) <= sig_level, ]$season))
         }else{
           seasons = numeric(0)
         }

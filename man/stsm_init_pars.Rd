@@ -12,7 +12,9 @@ stsm_init_pars(
   decomp = "",
   seasons = NULL,
   prior = NULL,
-  sig_level = 0.01
+  sig_level = 0.01,
+  arma = c(p = NA, q = NA),
+  interpolate = NA
 )
 }
 \arguments{
@@ -31,6 +33,11 @@ stsm_init_pars(
 \item{prior}{A data table created by stsm_prior}
 
 \item{sig_level}{Significance level for statistical tests}
+
+\item{arma}{Named vector with values for p and q corresponding to the ARMA(p,q) specification if}
+
+\item{interpolate}{Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"
+cycle is set to 'arma'. If NA, then will auto-select the order.}
 }
 \value{
 named vector containing the initial parameter estimates for estimation

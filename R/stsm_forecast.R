@@ -15,6 +15,7 @@
 #' @param smooth Whether or not to use the Kalman smoother
 #' @param dampen_cycle Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence
 #' @param envelope_ci Whether to create a envelope for the confidence interval to smooth out seasonal fluctuations
+#' to the longest seasonal period
 #' @import data.table ggplot2
 #' @useDynLib autostsm, .registration=TRUE
 #' @return data table (or list of data tables) containing the filtered and/or smoothed series.
@@ -40,7 +41,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #ci = 0.8
   #freq = exo = exo.fc = n.hist = NULL
   #plot = plot.decomp = plot.fc = smooth = TRUE
-  #dampen_cycle = FALSE
+  #dampen_cycle = envelope_ci = FALSE
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
@@ -98,7 +99,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   exo = stsm_format_exo(exo, dates, range)
   
   #Interpolate dates
-  if(!is.null(model$interpolate)){
+  if(!is.na(model$interpolate)){
     y = stsm_dates_to_interpolate(y = y, dates = dates, exo = exo, interpolate = model$interpolate)
     dates = y$dates
     exo = y$exo
@@ -162,7 +163,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  if(!is.null(model$interpolate)){
+  if(!is.na(model$interpolate)){
     int_per = ssm[["int_per"]]
     n.ahead = n.ahead*int_per
     if(is.null(exo.fc)){
@@ -192,37 +193,39 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     colnames(series)[ncol(series)] = "fev"
     series[!is.na(fev), "fev" := cumsum(fev) + c(ssm$Rm)]
     
-    if(dampen_cycle == TRUE & is.complex(eigen(ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))])$values) & n.ahead > 1){
-      #Smooth the cycle forecast into the trend using a sigmoid function so as not to get oscillating cycle forecasts
-      Fm = ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))]
-      B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(ssm$Fm))], with = FALSE]), ncol = 1)
-      for(j in 1:n.ahead){
-        B = cbind(B, Fm %*% B[, ncol(B)])
-      }
-      B = data.table(c = c(B[1, 2:ncol(B)]))
-      B[, "extrema" := shift(abs(c), type = "lag", n = 1) < abs(c) & shift(abs(c), type = "lead", n = 1) < abs(c)]
-      B[, "switch" := sign(c) != shift(sign(c), type = "lag", n = 1)]
-      if(nrow(B[switch == TRUE | extrema == TRUE, ]) > 0){
-        first_sign_switch = B[switch == TRUE, which = TRUE][1]
-        first_sign_siwtch = ifelse(length(first_sign_switch) == 0, Inf, first_sign_switch)
-        first_extrema = B[extrema == TRUE, which = TRUE][1]
-        first_extrema = ifelse(length(first_extrema) == 0, Inf, first_extrema)
-        wh1 = ifelse(first_sign_switch <= first_extrema, 1, first_extrema)
-        B = B[wh1:.N, ]
-        wh2 = B[switch == TRUE, which = TRUE][1]
-        wh2 = ifelse(length(wh2) == 0, nrow(B), wh2)
-        sigmoid = function(p, t){
-          p[1] + (0 - p[1])/(1 + p[2]*exp(-p[3]*(t - p[4])))^(1/p[5])
+    if(any(grepl("Ct|et", colnames(ssm$Fm)))){
+      if(dampen_cycle == TRUE & is.complex(eigen(ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))])$values) & n.ahead > 1){
+        #Smooth the cycle forecast into the trend using a sigmoid function so as not to get oscillating cycle forecasts
+        Fm = ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))]
+        B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(ssm$Fm))], with = FALSE]), ncol = 1)
+        for(j in 1:n.ahead){
+          B = cbind(B, Fm %*% B[, ncol(B)])
         }
-        t = 1:wh2
-        obj = function(p, t){
-          f1 = (B$c[1] - sigmoid(p, t[1]))^2
-          f2 = sum((B$c[1:wh2] - sigmoid(p, t[1:wh2]))^2)
-          return(f1 + f2)
+        B = data.table(c = c(B[1, 2:ncol(B)]))
+        B[, "extrema" := shift(abs(c), type = "lag", n = 1) < abs(c) & shift(abs(c), type = "lead", n = 1) < abs(c)]
+        B[, "switch" := sign(c) != shift(sign(c), type = "lag", n = 1)]
+        if(nrow(B[switch == TRUE | extrema == TRUE, ]) > 0){
+          first_sign_switch = B[switch == TRUE, which = TRUE][1]
+          first_sign_siwtch = ifelse(length(first_sign_switch) == 0, Inf, first_sign_switch)
+          first_extrema = B[extrema == TRUE, which = TRUE][1]
+          first_extrema = ifelse(length(first_extrema) == 0, Inf, first_extrema)
+          wh1 = ifelse(first_sign_switch <= first_extrema, 1, first_extrema)
+          B = B[wh1:.N, ]
+          wh2 = B[switch == TRUE, which = TRUE][1]
+          wh2 = ifelse(length(wh2) == 0, nrow(B), wh2)
+          sigmoid = function(p, t){
+            p[1] + (0 - p[1])/(1 + p[2]*exp(-p[3]*(t - p[4])))^(1/p[5])
+          }
+          t = 1:wh2
+          obj = function(p, t){
+            f1 = (B$c[1] - sigmoid(p, t[1]))^2
+            f2 = sum((B$c[1:wh2] - sigmoid(p, t[1:wh2]))^2)
+            return(f1 + f2)
+          }
+          out = stats::optim(c(B[1, 1], 1, 1, stats::median(t[1:wh2]), 1), fn = obj, method = "BFGS", t = t)
+          z = sigmoid(out$par, 1:(n.ahead - wh1 + 1))
+          series[(length(y) + wh1):.N, "Ct_0" := z]
         }
-        out = stats::optim(c(B[1, 1], 1, 1, stats::median(t[1:wh2]), 1), fn = obj, method = "BFGS", t = t)
-        z = sigmoid(out$par, 1:(n.ahead - wh1 + 1))
-        series[(length(y) + wh1):.N, "Ct_0" := z]
       }
     }
     
@@ -240,7 +243,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
         series[, "rn" := 1:.N]
         series = melt(series, id.vars = "rn")
         series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
-               "smooth" := stats::predict(stats::smooth.spline(value))$y,
+               "smooth" := stats::predict(stats::smooth.spline(value, spar = 0))$y,
                by = "variable"]
         series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
                 "shift" := frollapply(abs(value - smooth), align = "center", n = round(min(as.numeric(strsplit(model$seasons, ",")[[1]]))),
@@ -249,6 +252,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
         series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
                 "shift" := nafill(shift, type = "locf"),
                 by = "variable"]
+        series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(shift),
+               "shift" := stats::predict(stats::smooth.spline(shift, spar = 0))$y,
+               by = "variable"]
         series = series[.N:1, ]
         series[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%") & !is.na(value),
                 "shift" := nafill(shift, type = "locf"),
@@ -299,14 +305,14 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
         dates.fc = dates.fc[which(!weekdays(dates.fc) %in% c("Saturday", "Sunday"))][1:n.ahead]
       }else if(floor(freq) == 52){
         #Weekly frequency
-        if(is.null(model$interpolate)){
+        if(is.na(model$interpolate)){
           dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
         }else if(model$interpolate == "daily"){
           dates.fc = dates[length(dates)] %m+% lubridate::days(1:n.ahead)
         }
       }else if(floor(freq) == 12){
         #Monthly frequency
-        if(is.null(model$interpolate)){
+        if(is.na(model$interpolate)){
           dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
         }else if(model$interpolate == "weekly"){
           dates.fc = dates[length(dates)] %m+% lubridate::weeks(1:n.ahead)
@@ -315,7 +321,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
         }
       }else if(floor(freq) == 4){
         #Quarterly frequency
-        if(is.null(model$interpolate)){
+        if(is.na(model$interpolate)){
           dates.fc = dates[length(dates)] %m+% months((1:n.ahead)*3)
         }else if(model$interpolate == "monthly"){
           dates.fc = dates[length(dates)] %m+% months(1:n.ahead)
@@ -343,7 +349,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(!"Tt_0" %in% colnames(series)){
     series[, "trend" := 0]
   }else{
-    if(is.null(model$interpolate)){
+    if(is.na(model$interpolate)){
       colnames(series)[colnames(series) == "Tt_0"] = "trend"
     }else if(model$interpolate_method == "eop"){
       series[, "trend" := shift(Tt_0, n = 1, type = "lag")]
@@ -358,7 +364,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(!"Dt_0" %in% colnames(series)){
     series[, "drift" := 0]
   }else{
-    if(is.null(model$interpolate)){
+    if(is.na(model$interpolate)){
       colnames(series)[colnames(series) == "Dt_0"] = "drift"
     }else if(model$interpolate_method == "eop"){
       series[, "drift" := shift(Dt_0, n = 1, type = "lag")]
@@ -373,7 +379,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(!"Ct_0" %in% colnames(series)){
     series[, "cycle" := 0]
   }else{
-    if(is.null(model$interpolate)){
+    if(is.na(model$interpolate)){
       colnames(series)[colnames(series) == "Ct_0"] = "cycle"
     }else if(model$interpolate_method == "eop"){
       series[, "cycle" := shift(Ct_0, n = 1, type = "lag")]
@@ -400,7 +406,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     }else{
       colnames(series)[grepl("seasonal", colnames(series))] = "seasonal"
     }
-    if(!is.null(model$interpolate)){
+    if(!is.na(model$interpolate)){
       if(model$interpolate_method == "eop"){
         series[, "seasonal" := shift(seasonal, n = 1, type = "lag")]
       }else if(model$interpolate_method == "avg"){
@@ -442,7 +448,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   final[, "noise_adjusted" := observed - remainder]
   
   cols = colnames(final)[colnames(final) %in% c("observed", "trend", "fitted", paste0((1/2 + c(-ci, ci)/2)*100, "%")) | grepl("_adjusted", colnames(final))]
-  if(!is.null(model$interpolate)){
+  if(!is.na(model$interpolate)){
     if(model$interpolate_method %in% c("avg", "eop")){
       cols = c(cols, "interpolated")
     }
@@ -451,7 +457,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   
   cols = colnames(final)[!colnames(final) %in% c("date", cols, rownames(X))]
   final[,  c(cols) := lapply(.SD, function(x){x*sd}), .SDcols = c(cols)]
-  if(!is.null(model$interpolate)){
+  if(!is.na(model$interpolate)){
     if(model$interpolate_method == "sum"){
       final[, "interpolated" := interpolated + mean/int_per]
     }
@@ -514,11 +520,15 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   
   if(plot.fc == TRUE){
-    fc_plot = data.table::melt(final[(.N - (n.hist + n.ahead) + 1):.N, ], id.vars = c("date", "forecast"), measure.vars = c("observed", "trend", paste0((1/2 + c(-ci, ci)/2)*100, "%")))
-    fc_plot[variable != "trend" & forecast == FALSE, "group" := "observed"]
-    fc_plot[variable != "trend" & forecast == TRUE, "group" := "forecast"]
+    fc_plot = data.table::melt(final[(.N - (n.hist + n.ahead) + 1):.N, ], id.vars = c("date", "forecast"), measure.vars = c("observed", "trend", "fitted", paste0((1/2 + c(-ci, ci)/2)*100, "%")))
+    fc_plot[variable == "fitted" & forecast == TRUE, "group" := "forecast"]
+    fc_plot[variable == "observed" & forecast == FALSE, "group" := "observed"]
     fc_plot[variable == "trend", "group" := "trend"]
     fc_plot[variable %in% paste0((1/2 + c(-ci, ci)/2)*100, "%"), "group" := "conf. int."]
+    fc_plot = fc_plot[!is.na(group), ]
+    temp = fc_plot[group == "observed", ][date == max(date), ][, "group" := "forecast"][, "variable" := "fitted"][ , "forecast" := TRUE]
+    fc_plot = rbind(fc_plot, temp)[order(group, variable, date), ]
+    rm(temp)
     fc_plot[, "group" := factor(group, levels = c("observed", "forecast", "trend", "conf. int."), ordered = TRUE)]
     
     suppressWarnings(plot(ggplot(fc_plot) +

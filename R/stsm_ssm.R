@@ -122,7 +122,7 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   Qm[rownames(Qm) == "Dt_0", colnames(Qm) == "Dt_0"] = par["sig_d"]^2
   
   #Define the cycle component
-  if(grepl("cycle", decomp)){
+  if(any(grepl("lambda", names(par)))){
     Cm = par["phi_c"]*rbind(c(cos(par["lambda"]), sin(par["lambda"])),
                             c(-sin(par["lambda"]), cos(par["lambda"])))
     colnames(Cm) = c("Ct_1", "Cts_1")
@@ -159,7 +159,7 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     colnames(Hm) = rownames(Fm)
     
     Qm2 = diag(as.numeric(rownames(Cm) %in% c("Ct_0", "et_0")))
-    diag(Qm2) = par["sig_c"]^2
+    Qm2[Qm2 == 1] = par["sig_c"]^2
     Qm = stsm_bdiag(Qm, Qm2)
     colnames(Qm) = rownames(Qm) = rownames(Fm)
   }
@@ -194,7 +194,7 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   #Observation equation error covariance matrix
   Rm = matrix(par["sig_e"]^2, nrow = 1, ncol = 1)
   
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     if(interpolate == "quarterly"){
       int = 4
     }else if(interpolate == "monthly"){
@@ -251,6 +251,9 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     if(any(grepl("et_", rownames(B0)))){
       B0[grepl("et_", rownames(B0)), ] = par[grepl("et_", names(par))]
     }
+    if(any(grepl("It_", rownames(B0)))){
+      B0[grepl("It_", rownames(B0)), ] = par[grepl("It_", names(par))]
+    }
     if(grepl("seasonal", decomp)){
       if(!is.null(seasons)){
         for(j in seasons){
@@ -303,7 +306,7 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     rownames(P0) = colnames(P0) = rownames(Fm)
   }
   
-  if(!is.null(interpolate)){
+  if(!is.na(interpolate)){
     if(interpolate_method == "eop"){
       Hm[, "It_0"] = 1
       B0["It_0", ] = c(yt)[1]
