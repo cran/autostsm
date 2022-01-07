@@ -1,8 +1,8 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 2.1
-Date: 2021-12-01
+Version: 2.1.1
+Date: 2022-01-01
 Author: Alex Hubbard
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Description: Automatic model selection for structural time series decomposition into trend, cycle, and seasonal components, plus optionality for structural interpolation, using the Kalman filter. 
@@ -19,6 +19,6 @@ RoxygenNote: 7.1.2
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2021-11-15 17:58:01 UTC; alex.hubbard
+Packaged: 2022-01-07 00:14:52 UTC; alex.hubbard
 Repository: CRAN
-Date/Publication: 2021-12-02 08:50:08 UTC
+Date/Publication: 2022-01-07 12:12:45 UTC

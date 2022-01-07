@@ -274,7 +274,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   
   #Detect cycle
   user_set_cycle = cycle
-  if(is.null(cycle) & ifelse(!is.null(decomp), grepl("cycle", decomp) | cycle == "trig", TRUE) & length(y) >= 3*freq){
+  if(ifelse(is.null(cycle), TRUE, cycle == "trig") & ifelse(!is.null(decomp), grepl("cycle", decomp), TRUE) & length(y) >= 3*freq){
     if(verbose == TRUE){
       message("Checking for a trigonometric cycle...")
     }

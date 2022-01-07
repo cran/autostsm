@@ -124,7 +124,7 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
                      ("sig_c" %in% names(par) & det_cycle == FALSE) +
                      (any(grepl("sig_s", names(par))) & det_seas == FALSE),
                    ncol = length(par), dimnames = list(NULL, names(par)))
-     nr = 1
+    nr = 1
     if("sig_e" %in% names(par) & det_obs == FALSE){
       ineqA[nr, c(colnames(ineqA)[colnames(ineqA) %in% c("sig_d", "sig_t")], "sig_e")] = c(rep(-1, sum(colnames(ineqA) %in% c("sig_d", "sig_t"))), 1)
       nr = nr + 1
@@ -139,9 +139,9 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
     ineqB = matrix(0, nrow = nrow(ineqA), ncol = 1)
     constraints[["ineqA"]] = rbind(constraints[["ineqA"]], ineqA)
     constraints[["ineqB"]] = rbind(constraints[["ineqB"]], ineqB)
-    test_val = min(c(ifelse("sig_e" %in% names(par) & det_obs == FALSE, par["sig_e"], NA),
+    test_val = suppressWarnings(min(c(ifelse("sig_e" %in% names(par) & det_obs == FALSE, par["sig_e"], NA),
                      ifelse("sig_c" %in% names(par) & det_cycle == FALSE, par["sig_c"], NA),
-                     ifelse(any(grepl("sig_s", names(par))) & det_seas == FALSE, par[grepl("sig_s", names(par))], NA)), na.rm = TRUE)
+                     ifelse(any(grepl("sig_s", names(par))) & det_seas == FALSE, par[grepl("sig_s", names(par))], NA)), na.rm = TRUE))
     if(is.finite(test_val)){
       if(sum(par[names(par) %in% c("sig_d", "sig_t")]) >= test_val){
         if("sig_t" %in% names(par) & det_trend == FALSE){

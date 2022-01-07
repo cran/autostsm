@@ -1,9 +1,9 @@
-af74a0c47a596ac3f9948253b03f9c0b *DESCRIPTION
+696145d7ccad827304b408af594dcab3 *DESCRIPTION
 93b47c0238d072274eac2cbac7ef977c *NAMESPACE
 bb4d201f44b1c9e5b7719d54185bf5e1 *R/RcppExports.R
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
-58e892124ee624f7d0bca4c03126b3aa *R/stsm_constraints.R
+8ca5b027218394426d0c3df1aee2b9a4 *R/stsm_constraints.R
 514784af593d26884d493e0d1c2cf035 *R/stsm_data_checks.R
 067cce414fed56799f8005bd0ab87b08 *R/stsm_dates_to_interpolate.R
 c2c22660adc4809f550bafb1646b0797 *R/stsm_detect_anomalies.R
@@ -13,7 +13,7 @@ a84d6dac9503c22699bc648323d14dd3 *R/stsm_detect_cycle.R
 61c5b8f95641073bdd8ebdc145e2dc83 *R/stsm_detect_multiplicative.R
 73cee5f54635978532abafd03ef37373 *R/stsm_detect_seasonality.R
 7110f0fb997d61f1519931c49044a4ee *R/stsm_detect_trend.R
-7a8329bff08913ad11c0e08ad0031b44 *R/stsm_estimate.R
+c3e3750028aa2031b8d37c80ddec9540 *R/stsm_estimate.R
 933bdb0a213852ceb1cfb428209ba317 *R/stsm_fixed_par.R
 ceda807ed3da33671e17a17193aaaa37 *R/stsm_forecast.R
 fcf4035daf2d6dd146d216e76febb1e4 *R/stsm_init_pars.R
@@ -21,7 +21,7 @@ fcf4035daf2d6dd146d216e76febb1e4 *R/stsm_init_pars.R
 8b40e76bfaeb15ca2c5ccc90c247f708 *R/stsm_prior.R
 3810ff84ed001f99b667eef92ec51cec *R/stsm_ssm.R
 80f141bbb35967bb506fcf2c1084b052 *R/stsm_stat_tests.R
-a8e1dc7025f9b0c4a0ae9323b41a372c *R/zzz.R
+76935420c002982cc253dec3a7388701 *R/zzz.R
 09bd3b9f77495f39e90557285cb84e16 *build/vignette.rds
 650b604d22b942152c329196e63ada66 *data/DGS5.RData
 a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
@@ -29,16 +29,16 @@ a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
 4d8c16ff5e0466d6dd95ce7dba48ceaf *data/SP500.RData
 cdc27ae837de93c0c12c6cd541102bba *data/UNRATE.RData
 fb61b19775a81a942c3309055ba4fa36 *data/UNRATENSA.RData
-4a303e2bddf071c48c7241f45ee3bf76 *inst/doc/autostsm_vignette.R
-62ca9bd3c650d5a780c4ba7f6d4311c3 *inst/doc/autostsm_vignette.Rmd
-f0171b9f4c78f46ae21520318f741808 *inst/doc/autostsm_vignette.html
+49444ec9af7b8b45aa877177d436b5ad *inst/doc/autostsm_vignette.R
+cdaeeaa14d32f5477c86c1b5f2ae6494 *inst/doc/autostsm_vignette.Rmd
+41b6329066b25fa0a5edb2380e72107c *inst/doc/autostsm_vignette.html
 05da2df02f0a74441bbf5bccf916d0b0 *man/DGS5.Rd
 0c7705eb22ec5b94fcd7e6803a68b26d *man/GDP.Rd
 02d0083698b306e5565a2df9b924a213 *man/NA000334Q.Rd
 3e5ea9564d85822575651bc666a14705 *man/SP500.Rd
 f274711a58a2812fd9551f30c3802e78 *man/UNRATE.Rd
 844de123aff6345867fae3c0d169c875 *man/UNRATENSA.Rd
-1d57b2b1bb2d976de387e73a3e1d681a *man/autostsm.Rd
+0b9b6926b77aa7586ee6d8abe17635a6 *man/autostsm.Rd
 f4b751060c7406245f5466d380d5399d *man/stsm_bdiag.Rd
 02d8de185ecd6b5f109f7187da1541b0 *man/stsm_build_dates.Rd
 19b2c42654c061683d24c16fdc748f6d *man/stsm_check_exo.Rd
@@ -67,4 +67,4 @@ da115623a88f209bf6ce60bcd8bf7c53 *man/stsm_format_exo.Rd
 61059660eb073d93e00e8ee054237071 *src/Makevars.win
 ce87e2dccc106f901b705f99d3c411c9 *src/RcppExports.cpp
 444b61ff540a8fae41b225086afb954e *src/kalmanfilter.cpp
-62ca9bd3c650d5a780c4ba7f6d4311c3 *vignettes/autostsm_vignette.Rmd
+cdaeeaa14d32f5477c86c1b5f2ae6494 *vignettes/autostsm_vignette.Rmd
