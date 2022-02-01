@@ -8,7 +8,8 @@ stsm_filter(
   model,
   y,
   freq = NULL,
-  exo = NULL,
+  exo_obs = NULL,
+  exo_state = NULL,
   ci = 0.8,
   plot = FALSE,
   plot.decomp = FALSE,
@@ -22,11 +23,13 @@ stsm_filter(
 
 \item{freq}{Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected}
 
-\item{exo}{Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.}
+\item{exo_obs}{Matrix of exogenous variables to be used in the observation equation.}
+
+\item{exo_state}{Matrix of exogenous variables to be used in the state matrix.}
 
 \item{ci}{Confidence interval, value between 0 and 1 exclusive.}
 
-\item{plot, }{Logical, whether to plot everything}
+\item{plot}{Logical, whether to plot everything}
 
 \item{plot.decomp}{Logical, whether to plot the filtered historical data}
 

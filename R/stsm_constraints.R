@@ -15,7 +15,8 @@
 #' @return list containing the initial values for the Kalman filter
 stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drift, det_cycle, det_seas, det_obs, saturating_growth){
   #All sigma parameters must be positive unless they are deterministic
-  ineqA = matrix(0, nrow = length(par[grepl("sig_", names(par))]) - sum(c(det_trend, det_drift, det_cycle, det_seas*sum(grepl("sig_s", names(par))), det_obs)),
+  ineqA = matrix(0, nrow = length(par[grepl("sig_", names(par))]) - 
+                   sum(c(det_trend, det_drift, det_cycle, det_seas*sum(grepl("sig_s", names(par))), det_obs)),
                  ncol = length(par),
                  dimnames = list(NULL, names(par)))
   nr = 1
@@ -36,7 +37,7 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
       nr = nr + 1
     }
   }
-  ineqB = matrix(0, nrow = nrow(ineqA))
+  ineqB = matrix(0, nrow = nrow(ineqA), ncol = 1)
   constraints = list(ineqA = ineqA, ineqB = ineqB)
   
   if("d" %in% names(par) & saturating_growth == FALSE){
@@ -153,5 +154,10 @@ stsm_constraints = function(prior, par, freq, unconstrained, det_trend, det_drif
       }
     }
   }
+  
+  if(nrow(ineqA) == 0){
+    constraints = NULL
+  }
+  
   return(list(par = par, constraints = constraints))
 }

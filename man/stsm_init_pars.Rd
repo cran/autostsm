@@ -14,7 +14,10 @@ stsm_init_pars(
   prior = NULL,
   sig_level = 0.01,
   arma = c(p = NA, q = NA),
-  interpolate = NA
+  exo = NULL,
+  state_eqns = NULL,
+  interpolate = NA,
+  interpolate_method = NA
 )
 }
 \arguments{
@@ -36,8 +39,17 @@ stsm_init_pars(
 
 \item{arma}{Named vector with values for p and q corresponding to the ARMA(p,q) specification if}
 
+\item{exo}{Matrix of exogenous variables. Can be used to specify regression effects or other seasonal effects like holidays, etc.}
+
+\item{state_eqns}{Character vector of equations to apply exo_state to the unobserved components. If left as the default, then all variables in
+exo_state will be applied to all the unobserved components. The equations should look like:
+"trend ~ var - 1", "drift ~ var - 1", "cycle ~ var - 1", "seasonal ~ var - 1".
+If only some equations are specified, it will be assumed that the exogenous data will be applied to only those specified equations.}
+
 \item{interpolate}{Character string giving frequency to interpolate to: i.e. "quarterly", "monthly", "weekly", "daily"
 cycle is set to 'arma'. If NA, then will auto-select the order.}
+
+\item{interpolate_method}{Character string giving the interpolation method:}
 }
 \value{
 named vector containing the initial parameter estimates for estimation

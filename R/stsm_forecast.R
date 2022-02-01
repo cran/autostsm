@@ -6,8 +6,10 @@
 #' @param ci Confidence interval, value between 0 and 1 exclusive.
 #' @param y Univariate time series of data values. May also be a 2 column data frame containing a date column.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
-#' @param exo Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.
-#' @param exo.fc Matrix of exogenous variables used for the forecast
+#' @param exo_obs Matrix of exogenous variables to be used in the observation equation. 
+#' @param exo_state Matrix of exogenous variables to be used in the state matrix. 
+#' @param exo_obs.fc Matrix of exogenous variables in the observation matrix used for the forecast
+#' @param exo_state.fc Matrix of exogenous variables in the state matrix used for the forecast
 #' @param plot, Logical, whether to plot everything
 #' @param plot.decomp Logical, whether to plot the filtered historical data
 #' @param plot.fc Logical, whether to plot the forecast
@@ -33,13 +35,13 @@
 #' fc = stsm_forecast(stsm, y = NA000334Q, n.ahead = floor(stsm$freq)*3, plot = TRUE)
 #' }
 #' @export
-stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc = NULL, ci = 0.8, 
-                         plot = FALSE, plot.decomp = FALSE, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, 
+stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo_state = NULL, exo_obs.fc = NULL, exo_state.fc = NULL, 
+                         ci = 0.8, plot = FALSE, plot.decomp = FALSE, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, 
                          dampen_cycle = FALSE, envelope_ci = FALSE){
   #model = stsm
   #n.ahead = floor(model$freq*3)
   #ci = 0.8
-  #freq = exo = exo.fc = n.hist = NULL
+  #exo_obs = exo_state = exo_obs.fc = exo_state.fc = freq = n.hist = NULL
   #plot = plot.decomp = plot.fc = smooth = TRUE
   #dampen_cycle = envelope_ci = FALSE
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
@@ -67,8 +69,10 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     stop("ci must between 0 and 1. Suggested values are 0.8, 0.9, 0.95, 0.99.")
   }
   stsm_check_y(y)
-  stsm_check_exo(exo, y)
-  stsm_check_exo_fc(exo.fc, n.ahead)
+  stsm_check_exo(exo_obs, y)
+  stsm_check_exo(exo_state, y)
+  stsm_check_exo_fc(exo_obs.fc, n.ahead)
+  stsm_check_exo_fc(exo_obs.fc, n.ahead)
   
   #Assign plot values
   if(plot == TRUE){
@@ -96,7 +100,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   range = which(!is.na(y))
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
-  exo = stsm_format_exo(exo, dates, range)
+  exo = stsm_format_exo(exo_obs, exo_state, dates, range)
   
   #Interpolate dates
   if(!is.na(model$interpolate)){
@@ -107,29 +111,52 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   
   #Set the historical exogenous variables
-  if(is.null(exo)){
-    X = t(matrix(0, nrow = length(y), ncol = 1))
-    X[is.na(X)] = 0
-    rownames(X) = "X"
+  if(is.null(exo_obs)){
+    Xo = t(matrix(0, nrow = length(y), ncol = 1))
+    Xo[is.na(Xo)] = 0
+    rownames(Xo) = "Xo"
   }else{
-    X = t(exo)
+    Xo = t(exo[, grepl("obs\\.", colnames(exo)), with = FALSE])
+  }
+  if(is.null(exo_state)){
+    Xs = t(matrix(0, nrow = length(y), ncol = 1))
+    Xs[is.na(Xs)] = 0
+    rownames(Xs) = "Xs"
+  }else{
+    Xs = t(exo[, grepl("state\\.", colnames(exo)), with = FALSE])
   }
   
   #Set the forecast exogenous variables
-  if(!is.null(exo.fc)){
-    if(is.null(exo)){
-      warning("exo.fc is supplied but exo is not. Not using exo.")
+  if(!is.null(exo_obs.fc)){
+    if(is.null(exo_obs)){
+      warning("exo_obs.fc is supplied but exo is not. Not using exo_obs.")
     }else{
-      exo.fc = as.data.table(exo.fc)
-      exo.fc = exo.fc[, names(which(unlist(exo.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
-      X = cbind(X, t(exo.fc))
-      if(ncol(X) != length(y) + n.ahead){
-        stop("nrow of exo + exo.fc does not equal length of y + n.ahead.")
+      exo_obs.fc = as.data.table(exo_obs.fc)
+      exo_obs.fc = exo_obs.fc[, names(which(unlist(exo_obs.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
+      Xo = cbind(Xo, t(exo_obs.fc))
+      if(ncol(Xo) != length(y) + n.ahead){
+        stop("nrow of exo_obs + exo_obs.fc does not equal length of y + n.ahead.")
       }
     }
   }else{
     if(n.ahead > 0){
-      X = cbind(X, matrix(0, ncol = n.ahead))
+      Xo = cbind(Xo, matrix(0, ncol = n.ahead))
+    }
+  }
+  if(!is.null(exo_state.fc)){
+    if(is.null(exo_state)){
+      warning("exo_state.fc is supplied but exo_state is not. Not using exo_state.")
+    }else{
+      exo_state.fc = as.data.table(exo_state.fc)
+      exo_state.fc = exo_state.fc[, names(which(unlist(exo_state.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
+      Xs = cbind(Xs, t(exo_state.fc))
+      if(ncol(Xs) != length(y) + n.ahead){
+        stop("nrow of exo_state + exo_state.fc does not equal length of y + n.ahead.")
+      }
+    }
+  }else{
+    if(n.ahead > 0){
+      Xs = cbind(Xs, matrix(0, ncol = n.ahead))
     }
   }
   
@@ -166,38 +193,43 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   if(!is.na(model$interpolate)){
     int_per = ssm[["int_per"]]
     n.ahead = n.ahead*int_per
-    if(is.null(exo.fc)){
+    if(is.null(exo_obs.fc)){
       if(n.ahead > 0){
-        X = cbind(X, matrix(0, ncol = n.ahead - (ncol(X) - length(y))))
+        Xo = cbind(Xo, matrix(0, ncol = n.ahead - (ncol(Xo) - length(y))))
+      }
+    }
+    if(is.null(exo_state.fc)){
+      if(n.ahead > 0){
+        Xs = cbind(Xs, matrix(0, ncol = n.ahead - (ncol(Xs) - length(y))))
       }
     }
   }
-  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt, type = "message")
-  rownames(B_tt) = rownames(ssm$Fm)
+  msg = utils::capture.output(kf <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth), type = "message")
+  B_tt = kf[["B_tt"]]
+  rownames(B_tt) = rownames(ssm[["Fm"]])
 
   #Get the unobserved series
   series = data.table(t(B_tt))
-  series$fitted = c(matrix(ssm$Am, nrow = 1, ncol = nrow(series)) + 
-                      ssm$Hm %*% t(as.matrix(series[, rownames(B_tt), with = FALSE])) + 
-                      matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, 1:length(y)])
-
+  series$fitted = c(kf[["yt_pred"]])
+  
   #Forecast
   if(n.ahead > 0){
-    Fm_pow = diag(nrow(ssm$Fm))
+    Fm_pow = diag(nrow(ssm[["Fm"]]))
     for(j in 1:n.ahead){
-      Fm_pow = Fm_pow %*% ssm$Fm
-      series = rbind(series, cbind(t(ssm$Dm + ssm$Fm %*% t(as.matrix(series[.N, rownames(B_tt), with = FALSE]))),
-                                   c(ssm$Hm %*% (Fm_pow %*% ssm$Qm %*% t(Fm_pow)) %*% t(ssm$Hm))),
+      Fm_pow = Fm_pow %*% ssm[["Fm"]]
+      series = rbind(series, cbind(t(ssm[["Dm"]] + ssm[["Fm"]] %*% t(as.matrix(series[.N, rownames(B_tt), with = FALSE])) 
+                                     + ssm[["betaS"]] %*% as.matrix(Xs[, length(y) + j], nrow = nrow(Xs))),
+                                   c(ssm[["Hm"]] %*% (Fm_pow %*% ssm[["Qm"]] %*% t(Fm_pow)) %*% t(ssm[["Hm"]]))),
                      use.names = TRUE, fill = TRUE)
     }
     colnames(series)[ncol(series)] = "fev"
-    series[!is.na(fev), "fev" := cumsum(fev) + c(ssm$Rm)]
+    series[!is.na(fev), "fev" := cumsum(fev) + c(ssm[["Rm"]])]
     
-    if(any(grepl("Ct|et", colnames(ssm$Fm)))){
-      if(dampen_cycle == TRUE & is.complex(eigen(ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))])$values) & n.ahead > 1){
+    if(any(grepl("Ct|et", colnames(ssm[["Fm"]])))){
+      if(dampen_cycle == TRUE & is.complex(eigen(ssm[["Fm"]][grepl("Ct|et", colnames(ssm[["Fm"]])), grepl("Ct|et", rownames(ssm[["Fm"]]))])$values) & n.ahead > 1){
         #Smooth the cycle forecast into the trend using a sigmoid function so as not to get oscillating cycle forecasts
-        Fm = ssm$Fm[grepl("Ct|et", colnames(ssm$Fm)), grepl("Ct|et", rownames(ssm$Fm))]
-        B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(ssm$Fm))], with = FALSE]), ncol = 1)
+        Fm = ssm[["Fm"]][grepl("Ct|et", colnames(ssm[["Fm"]])), grepl("Ct|et", rownames(ssm[["Fm"]]))]
+        B = matrix(unlist(series[length(y), colnames(series)[grepl("Ct|et", colnames(ssm[["Fm"]]))], with = FALSE]), ncol = 1)
         for(j in 1:n.ahead){
           B = cbind(B, Fm %*% B[, ncol(B)])
         }
@@ -229,9 +261,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
       }
     }
     
-    series[!is.na(fev), "fitted" := c(matrix(ssm$Am, nrow = 1, ncol = nrow(series[!is.na(fev), ])) +
-                                        ssm$Hm %*% t(as.matrix(series[!is.na(fev), rownames(B_tt), with = FALSE])) + 
-                                        matrix(par[grepl("beta_", names(par))], nrow = 1) %*% X[, (length(y) + 1):ncol(X)])]
+    series[!is.na(fev), "fitted" := c(matrix(ssm[["Am"]], nrow = 1, ncol = nrow(series[!is.na(fev), ])) +
+                                        ssm[["Hm"]] %*% t(as.matrix(series[!is.na(fev), rownames(B_tt), with = FALSE])) + 
+                                        ssm[["betaO"]] %*% Xo[, (length(y) + 1):ncol(Xo)])]
     
     series[!is.na(fev), paste0((1/2 - ci/2)*100, "%") := stats::qnorm(1/2 - ci/2, fitted, sqrt(fev))]
     series[!is.na(fev), paste0((1/2 + ci/2)*100, "%") := stats::qnorm(1/2 + ci/2, fitted, sqrt(fev))]
@@ -273,7 +305,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   #Build the forecast dates
   `%m+%` = lubridate::`%m+%`
   if(n.ahead > 0){
-    y.fc = c(ssm$Am[1, ] + ssm$Hm %*% t(as.matrix(series[(length(y) + 1):.N, rownames(B_tt), with = FALSE])))
+    y.fc = series[(length(y) + 1):.N, ]$fitted
     if(standard_freq == TRUE){
       if(floor(freq) == floor(60*60*24*365.25)){
         #Secondly frequency
@@ -417,23 +449,12 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
     }
   }
   
-  #Set the exogenous
-  if(!is.null(exo)){
-    XB = do.call("cbind", lapply(1:nrow(X), function(x){
-      name = names(par)[grepl("beta_", names(par))][x]
-      par[name]*X[x, ]
-    }))
-    colnames(XB) = rownames(X)
-    series = cbind(series, XB)
-    rm(XB)
-  }
-  
   #Get the remainder
   series[, "remainder" := c(y, y.fc) - fitted]
   
   #Combine the filtered series
   final = data.table(date = c(dates, dates.fc), observed = c(y, y.fc), 
-                     series[, colnames(series) %in% c("trend", "drift", "cycle", "remainder", "fitted", "interpolated", rownames(X)) | grepl("seasonal|\\%", colnames(series)), with = FALSE])
+                     series[, colnames(series) %in% c("trend", "drift", "cycle", "remainder", "fitted", "interpolated", rownames(Xo), rownames(Xs)) | grepl("seasonal|\\%", colnames(series)), with = FALSE])
   rm(series, B_tt)
   
   #Calculate adjusted series
@@ -455,7 +476,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
   }
   final[, c(cols) := lapply(.SD, function(x){x*sd + mean}), .SDcols = c(cols)]
   
-  cols = colnames(final)[!colnames(final) %in% c("date", cols, rownames(X))]
+  cols = colnames(final)[!colnames(final) %in% c("date", cols, rownames(Xo), rownames(Xs))]
   final[,  c(cols) := lapply(.SD, function(x){x*sd}), .SDcols = c(cols)]
   if(!is.na(model$interpolate)){
     if(model$interpolate_method == "sum"){
@@ -553,8 +574,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
 #' @param ci Confidence interval, value between 0 and 1 exclusive.
 #' @param y Univariate time series of data values. May also be a 2 column data frame containing a date column.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
-#' @param exo Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.
-#' @param plot, Logical, whether to plot everything
+#' @param exo_obs Matrix of exogenous variables to be used in the observation equation. 
+#' @param exo_state Matrix of exogenous variables to be used in the state matrix. 
+#' @param plot Logical, whether to plot everything
 #' @param plot.decomp Logical, whether to plot the filtered historical data
 #' @param smooth Whether or not to use the Kalman smoother
 #' @import data.table ggplot2
@@ -574,9 +596,11 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc 
 #' fc = stsm_filter(stsm, y = NA000334Q, plot = TRUE)
 #' }
 #' @export
-stsm_filter = function(model, y, freq = NULL, exo = NULL, ci = 0.8, 
+stsm_filter = function(model, y, freq = NULL, exo_obs = NULL, exo_state = NULL, ci = 0.8, 
                        plot = FALSE, plot.decomp = FALSE, smooth = TRUE){
-  stsm = stsm_forecast(model, y, n.ahead = 0, freq = NULL, exo = NULL, exo.fc = NULL, ci = 0.8, 
-                plot = plot, plot.decomp = plot.decomp, plot.fc = FALSE, n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE)
+  stsm = stsm_forecast(model, y, n.ahead = 0, freq = NULL, exo_obs = exo_obs, exo_state = exo_state, 
+                       exo_obs.fc = NULL, exo_state.fc = NULL, ci = 0.8, 
+                       plot = plot, plot.decomp = plot.decomp, plot.fc = FALSE, 
+                       n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE)
   return(stsm)
 }

@@ -244,7 +244,7 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
                                                                df1 = summary(lm)$fstatistic["numdf"], 
                                                                df2 = summary(lm)$fstatistic["dendf"])))
                           })
-          return(data.table(season = i, pval = test$`Pr(>F)`[2]))
+          return(data.table(season = i, pval = unlist(test$`Pr(>F)`[2])))
         }
         
         #Remove insignificant seasonalities
@@ -271,7 +271,7 @@ stsm_detect_seasonality = function(y, freq, sig_level = 0.01, prior = NULL,
                                                     df2 = summary(lm)$fstatistic["dendf"])))
                         })
         
-        if(round(final_ftest$`Pr(>F)`[2], 2) <= sig_level){
+        if(round(final_ftest$`Pr(>F)`[[2]], 2) <= sig_level){
           seasons = unique(as.numeric(f_tests[round(pval, 2) <= sig_level, ]$season))
         }else{
           seasons = numeric(0)

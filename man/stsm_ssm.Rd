@@ -26,7 +26,7 @@ stsm_ssm(
 
 \item{decomp}{Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")}
 
-\item{trend}{Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likielhood.
+\item{trend}{Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likelihood.
 "random-walk" is the random walk trend.
 "random-walk-drift" is the random walk with constant drift trend.
 "double-random-walk" is the random walk with random walk drift trend.
@@ -53,8 +53,8 @@ List of space space matrices
 }
 \description{
 Creates a state space model in list form
-yt = H*B + e_t
-B = F*B_{t-1} + u_t
+yt = H*B + B^O X^O_t + e_t
+B = F*B_{t-1} + B^S X^S_t + u_t
 }
 \examples{
 \dontrun{

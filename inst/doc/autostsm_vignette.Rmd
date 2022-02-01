@@ -25,18 +25,18 @@ With ease-of-use in mind, all the user has to do is provide a two column data fr
 The model is based on the decomposition
 
 $$
-Y_t = T_t + C_t + S_t + B X_t + e_t
+Y_t = T_t + C_t + S_t + B^o X^o_t + e_t
 $$
 
-where $Y_t$ is a univariate time series, $T_t$ is the trend component, $C_t$ is the cycle component, $S_t$ is the seasonal component, $X_t$ is optional exogenous data, and $e_t \sim N(0, \sigma_e^2)$ is the observation error. The seasonal and cycle components are assumed to be of a trigonometric form, while the trend is assumed to be one of three types: a random walk, a random walk with an AR(1) drift, or a double random walk (random walk with a random walk drift). 
+where $Y_t$ is a univariate time series, $T_t$ is the trend component, $C_t$ is the cycle component, $S_t$ is the seasonal component, $X^o_t$ is optional exogenous data in the observation equation, and $e_t \sim N(0, \sigma_e^2)$ is the observation error. The seasonal and cycle components are assumed to be of a trigonometric form, while the trend is assumed to be one of three types: a random walk, a random walk with an AR(1) drift, or a double random walk (random walk with a random walk drift). 
 
-For state space model is written as
+The state space model is written as
 $$
-Y_t = A + H \beta + BX + e_t, e_t \sim N(0, R)\\
-\beta_t = D + F \beta_{t-1} + u_t, u_t \sim N(0, Q)
+Y_t = A + H \beta + B^o X^o_t + e_t, e_t \sim N(0, R)\\
+\beta_t = D + F \beta_{t-1} + B^s X^s_t + u_t, u_t \sim N(0, Q)
 $$
 
-where the first equation is the observation equation and the second equation is the transition equation. $H$ is the observation matrix and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the unobserved components (trend, seasonal, and cycle), $F$ is the transition matrix, and $Q$ is the transition error-covariance matrix.
+where the first equation is the observation equation and the second equation is the transition equation. $H$ is the observation matrix and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the unobserved components (trend, seasonal, and cycle), $F$ is the transition matrix, and $Q$ is the transition error-covariance matrix. $X^s_t$ is optional exogenous data in the state equation.
 
 ## Trend Models
 
@@ -231,7 +231,7 @@ To estimate the unobserved components ($T_t, C_t, S_t$, and $D_t$), the Kalman f
 The first stage is the prediction stage, which makes predictions on the unobserved components based on information up to time $t-1$. This stage is made up of four equations, the first is the prediction of the unobserved components based on its time series properties
 
 $$
-B_{t|t-1} = \bar{D} + F \beta_{t-1|t-1}
+B_{t|t-1} = \bar{D} + F \beta_{t-1|t-1} + B^s X^s_t
 $$
 
 Second, is the prediction of the covariance matrix of the unobserved components
@@ -239,9 +239,11 @@ Second, is the prediction of the covariance matrix of the unobserved components
 $$
 P_{t|t-1} = F P_{t_1|t-1} F^{\prime} + Q
 $$
+
 Third, is the prediction error of the time series of interest
+
 $$
-\eta_{t|t-1} + Y_t - (A + H \beta_{t|t-1} + BX)
+\eta_{t|t-1} = Y_t - (A + H \beta_{t|t-1} + B^o X^o_t)
 $$
 
 And finally, we have the variance of the prediction error
@@ -255,7 +257,7 @@ $$
 The second stage is the updating stage, which makes predictions based on all information up to time $t$. It consists of three equations. The first equation is the prediction of the unobserved components based on the the full information set
 
 $$
-\beta_{t|t} = B_{t|t-1} + K_t \eta_{t}
+\beta_{t|t} = B_{t|t-1} + K_t \eta_{t|t-1}
 $$
 where $K_t$ is the Kalman gain, which determines the optimal weight to give new information in making predictions about $\beta_t$ and is the second equation
 
@@ -265,7 +267,7 @@ $$
 The last equation is the updating of the covariance matrix of the unobserved components
 
 $$
-P_{t|t} = P_{t|t-1} + K_t H^{\prime} P_{t|t-1}
+P_{t|t} = P_{t|t-1} - K_t H^{\prime} P_{t|t-1}
 $$
 The seven equations above, make up the full Kalman filter routine. If $Y_t$ is missing for any observation, then 
 
@@ -285,6 +287,7 @@ The first equation updates the prediction of the unobserved components based on 
 $$
 \beta_{t|T} = \beta_{t|t} + P_{t|t} F^{\prime} P_{t|t}^{-1} (\beta_{t+1|T} - \beta_{t+1|t})
 $$
+
 The second equation updates the covariance matrix of the unobserved components based on all the available information
 
 $$
@@ -379,7 +382,7 @@ The model makes recursive predictions for the j-th step ahead using
 $$
 \hat{Y_{t+j}} = H F^j \beta_{t}
 $$
-where the j-step ahead forecast error variance is given by
+since $A = 0$ and $D = 0$ for this model. The j-step ahead forecast error variance is given by
 
 $$
 FEV = \left(\sum_{i=0}^{j-1} H F^i Q F^{i\prime} H^{\prime}\right) + R 
@@ -486,6 +489,45 @@ stsm_fc = merge(stsm_fc,
 stsm_fc = merge(stsm_fc, 
                 stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE], plot = TRUE, show_progress = TRUE), 
                 by = "date", all = TRUE)
+```
+
+## Using Exogenous Data
+
+```{r}
+library(autostsm)
+
+#Define the exogenous data
+exo_obs = data.table(date = ts$date, Xo = rnorm(nrow(ts)))
+exo_state = data.table(date = ts$date, Xs_trend = rnorm(nrow(ts)), 
+                       Xs_seasonal = rep(0, nrow(ts)))
+exo_state[seq(1, .N, by = 7), "Xs_seasonal" := 1]
+
+#Estimate the model
+stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE], 
+                     exo_obs = exo_obs, exo_state = exo_state, 
+                     state_eqns = c("trend ~ Xs_trend - 1", "seasonal ~ Xs_seasonal - 1"), 
+                     verbose = TRUE)
+
+#Check the exogenous parameter estimates
+stsm_ssm(model = stsm)[c("betaO", "betaS")]
+
+#Filter and plot the results
+stsm_fc = stsm_filter(stsm, y = ts[, c("date", "y"), with = FALSE], 
+                      exo_obs = exo_obs, exo_state = exo_state, plot = TRUE)
+
+#Detect anomalies
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_anomalies(stsm, y = ts[, c("date", "y"), with = FALSE], 
+                                       exo_obs = exo_obs, exo_state = exo_state, plot = TRUE), 
+                by = "date", all = TRUE)
+
+#Detect structural breaks
+stsm_fc = merge(stsm_fc, 
+                stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE], 
+                                   exo_obs = exo_obs, exo_state = exo_state, 
+                                   plot = TRUE, show_progress = TRUE), 
+                by = "date", all = TRUE)
+
 ```
 
 ## Real Data Decompositions
@@ -757,7 +799,8 @@ UNRATE[, "qtr" := ceiling_date(date, "quarter") %m-% months(1)]
 UNRATE[, "y_avg" := frollmean(y, n = 3, align = "right")]
 
 #Cycle taken from previous example
-stsm = stsm_estimate(y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], cycle = 156/3,
+stsm = stsm_estimate(y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], 
+                     seasons = FALSE, cycle = 156/3,
                      interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
 stsm_fc = stsm_filter(stsm, y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], plot = TRUE)
 stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")], 
@@ -784,7 +827,9 @@ DGS5[, "y" := as.numeric(y)]
 DGS5[, "qtr" := ceiling_date(date, "quarter") %m-% months(1)]
 DGS5[, "y_avg" := frollmean(y, n = 3, align = "right")]
 
-stsm = stsm_estimate(y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], seasons = FALSE,
+#Cycle taken from previous example
+stsm = stsm_estimate(y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], 
+                     seasons = FALSE, cycle = 112/3,
                      interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
 stsm_fc = stsm_filter(stsm, y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], plot = TRUE)
 stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")], 

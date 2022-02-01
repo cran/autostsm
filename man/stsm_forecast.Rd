@@ -9,8 +9,10 @@ stsm_forecast(
   y,
   n.ahead = 0,
   freq = NULL,
-  exo = NULL,
-  exo.fc = NULL,
+  exo_obs = NULL,
+  exo_state = NULL,
+  exo_obs.fc = NULL,
+  exo_state.fc = NULL,
   ci = 0.8,
   plot = FALSE,
   plot.decomp = FALSE,
@@ -30,9 +32,13 @@ stsm_forecast(
 
 \item{freq}{Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected}
 
-\item{exo}{Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.}
+\item{exo_obs}{Matrix of exogenous variables to be used in the observation equation.}
 
-\item{exo.fc}{Matrix of exogenous variables used for the forecast}
+\item{exo_state}{Matrix of exogenous variables to be used in the state matrix.}
+
+\item{exo_obs.fc}{Matrix of exogenous variables in the observation matrix used for the forecast}
+
+\item{exo_state.fc}{Matrix of exogenous variables in the state matrix used for the forecast}
 
 \item{ci}{Confidence interval, value between 0 and 1 exclusive.}
 

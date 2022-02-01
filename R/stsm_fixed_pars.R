@@ -16,11 +16,10 @@
 #' @param det_drift Set the drift error variance to 0 (deterministic drift)
 #' If det_drift = TRUE then the error variance of the drift equation (sig_d) is set to 0 and 
 #' is refereed to as a deterministic drift
-#' @param exo Matrix of exogenous variables. Can be used to specify regression effects or other seasonal effects like holidays, etc.
 #' @param saturating_growth Force the growth rate to converge to 0 in the long term 
 stsm_fixed_pars = function(par, y, det_obs = FALSE, det_trend = FALSE, det_drift = FALSE, 
-                           det_cycle = FALSE, det_seas = FALSE, 
-                           saturating_growth = FALSE, exo = NULL){
+                           det_cycle = FALSE, det_seas = FALSE, saturating_growth = FALSE){
+  
   #Set any fixed parameters
   fixed = NULL
   if(det_obs == TRUE){
@@ -75,14 +74,8 @@ stsm_fixed_pars = function(par, y, det_obs = FALSE, det_trend = FALSE, det_drift
     par[names(par) == "d"] = 0
     fixed = c(fixed, "d")
   }
-  if(is.null(exo)){
-    X = t(matrix(0, nrow = length(y), ncol = 1))
-    rownames(X) = "X"
-    par = c(par, beta_X = 0)
-    fixed = c(fixed, "beta_X")
-  }else{
-    X = t(exo)
-    par = c(par, beta_ = stats::coef(stats::lm(y ~ . - 1, data = data.frame(cbind(y, exo)))))
-  }
-  return(list(par = par, fixed = fixed, X = X))
+  fixed = c(fixed, names(par)[is.na(par)])
+  par[is.na(par)] = 0
+  
+  return(list(par = par, fixed = fixed))
 }

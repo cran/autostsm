@@ -12,13 +12,13 @@ stsm_bdiag = function(A, B){
 #' State space model
 #' 
 #' Creates a state space model in list form
-#' yt = H*B + e_t
-#' B = F*B_{t-1} + u_t
+#' yt = H*B + B^O X^O_t + e_t
+#' B = F*B_{t-1} + B^S X^S_t + u_t
 #'
 #' @param par Vector of named parameter values, includes the harmonics
 #' @param yt Univariate time series of data values
 #' @param decomp Decomposition model ("tend-cycle-seasonal", "trend-seasonal", "trend-cycle", "trend-noise")
-#' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likielhood.
+#' @param trend Trend specification ("random-walk", "random-walk-drift", "double-random-walk", "random-walk2"). The default is NULL which will choose the best of all specifications based on the maximum likelihood.
 #' "random-walk" is the random walk trend.
 #' "random-walk-drift" is the random walk with constant drift trend.
 #' "double-random-walk" is the random walk with random walk drift trend.
@@ -105,14 +105,6 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     #Observation matrix
     Hm = matrix(c(1, 0), nrow = 1)
     colnames(Hm) = rownames(Fm)
-  }
-  
-  #Get the parameters on exogenous data
-  if(any(grepl("beta_", names(par)))){
-    beta = matrix(par[grepl("beta_", names(par))], nrow = 1, ncol = length(par[grepl("beta_", names(par))]))
-    colnames(beta) = gsub("beta_\\.", "", names(par[grepl("beta_", names(par))]))
-  }else{
-    beta = matrix(0, nrow = 1, ncol = 1)
   }
   
   #Define the transition error covariance matrix
@@ -236,6 +228,22 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     int_per = 1
   }
   
+  #Get the parameters on exogenous data
+  if(any(grepl("betaO_", names(par)))){
+    betaO = matrix(par[grepl("betaO_", names(par))], nrow = 1, ncol = length(par[grepl("betaO_", names(par))]))
+    colnames(betaO) = gsub("betaO_", "", names(par[grepl("betaO_", names(par))]))
+  }else{
+    betaO = matrix(0, nrow = 1, ncol = 1, dimnames = list(NULL, "Xo"))
+  }
+  if(any(grepl("betaS_", names(par)))){
+    betaS = matrix(par[grepl("betaS_", names(par))], nrow = nrow(Fm))
+    colnames(betaS) = unique(gsub("\\.", "", gsub(paste(rownames(Fm), collapse = "|"), "", 
+                           gsub("betaS_", "", names(par[grepl("betaS_", names(par))])))))
+    rownames(betaS) = rownames(Fm)
+  }else{
+    betaS = matrix(0, nrow = nrow(Fm), ncol = 1, dimnames = list(rownames(Fm), "Xs"))
+  }
+  
   #Initial guess for unobserved vector
   if(all(rownames(Fm)[grepl("_0", rownames(Fm))] %in% names(par))){
     B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
@@ -267,29 +275,32 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
   }else{
     #Build the prior
     if(is.null(prior)){
-      prior = stsm_prior(c(yt), freq, decomp, seasons, cycle) 
+      prior = tryCatch(stsm_prior(c(yt), freq, decomp, seasons, cycle), 
+                       error = function(err){NULL})
     }else{
       prior = copy(prior)
     }
     
     B0 = matrix(0, ncol = 1, nrow = nrow(Fm), dimnames = list(rownames(Fm), NULL))
-    if(any(grepl("Tt_", rownames(B0)))){
-      B0[grepl("Tt_", rownames(B0)), ] = prior[!is.na(trend), ]$trend[1]
-    }
-    if(any(grepl("Ct_", rownames(B0)))){
-      B0[grepl("Ct_|Cts_", rownames(B0)), ] = prior[!is.na(cycle), ]$cycle[1]
-    }
-    if(any(grepl("Dt_", rownames(B0)))){
-      B0[grepl("Dt_", rownames(B0)), ] = prior[!is.na(drift), ]$drift[1]
-    }
-    if(any(grepl("et_", rownames(B0)))){
-      B0[grepl("et_", rownames(B0)), ] = prior[!is.na(remainder), ]$remainder[1]
-    }
-    if(grepl("seasonal", decomp)){
-      if(!is.null(seasons)){
-        for(j in seasons){
-          B0[grepl(paste(paste0(c("St", "Sts"), j), collapse = "|"), rownames(B0)), ] = 
-            prior[!is.na(eval(parse(text = paste0("seasonal", j)))), c(paste0("seasonal", j)), with = FALSE][[1]][1]
+    if(!is.null(prior)){
+      if(any(grepl("Tt_", rownames(B0)))){
+        B0[grepl("Tt_", rownames(B0)), ] = prior[!is.na(trend), ]$trend[1]
+      }
+      if(any(grepl("Ct_", rownames(B0)))){
+        B0[grepl("Ct_|Cts_", rownames(B0)), ] = prior[!is.na(cycle), ]$cycle[1]
+      }
+      if(any(grepl("Dt_", rownames(B0)))){
+        B0[grepl("Dt_", rownames(B0)), ] = prior[!is.na(drift), ]$drift[1]
+      }
+      if(any(grepl("et_", rownames(B0)))){
+        B0[grepl("et_", rownames(B0)), ] = prior[!is.na(remainder), ]$remainder[1]
+      }
+      if(grepl("seasonal", decomp)){
+        if(!is.null(seasons)){
+          for(j in seasons){
+            B0[grepl(paste(paste0(c("St", "Sts"), j), collapse = "|"), rownames(B0)), ] = 
+              prior[!is.na(eval(parse(text = paste0("seasonal", j)))), c(paste0("seasonal", j)), with = FALSE][[1]][1]
+          }
         }
       }
     }
@@ -320,7 +331,8 @@ stsm_ssm = function(par = NULL, yt = NULL, decomp = NULL,
     P0[grepl("It_", rownames(P0)), grepl("It_", colnames(P0))] = 0
   }
   
-  ret = list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, beta = beta, int_per = int_per)
+  ret = list(B0 = B0, P0 = P0, Am = Am, Dm = Dm, Hm = Hm, Fm = Fm, Rm = Rm, Qm = Qm, 
+             betaO = betaO, betaS = betaS, int_per = int_per)
   return(ret)
 }
 

@@ -6,7 +6,9 @@
 \usage{
 stsm_estimate(
   y,
-  exo = NULL,
+  exo_obs = NULL,
+  exo_state = NULL,
+  state_eqns = NULL,
   freq = NULL,
   decomp = NULL,
   trend = NULL,
@@ -37,7 +39,14 @@ stsm_estimate(
 \arguments{
 \item{y}{Univariate time series of data values. May also be a 2 column data frame containing a date column.}
 
-\item{exo}{Matrix of exogenous variables. Can be used to specify regression effects or other seasonal effects like holidays, etc.}
+\item{exo_obs}{Matrix of exogenous variables to be used in the observation equation.}
+
+\item{exo_state}{Matrix of exogenous variables to be used in the state matrix.}
+
+\item{state_eqns}{Character vector of equations to apply exo_state to the unobserved components. If left as the default, then all variables in
+exo_state will be applied to all the unobserved components. The equations should look like:
+"trend ~ var - 1", "drift ~ var - 1", "cycle ~ var - 1", "seasonal ~ var - 1".
+If only some equations are specified, it will be assumed that the exogenous data will be applied to only those specified equations.}
 
 \item{freq}{Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected}
 
@@ -130,7 +139,7 @@ into trend, cycle, and/or seasonal components plus noise. The function automatic
 detects the frequency and checks for a seasonal and cycle component if the user does not specify
 the frequency or decomposition model. This can be turned off by setting freq or specifying decomp.
 State space model for decomposition follows
-Yt = T_t + C_t + S_t + A*X_t + e_t, e_t ~ N(0, sig_e^2)
+Yt = T_t + C_t + S_t + B*X_t + e_t, e_t ~ N(0, sig_e^2)
 Y is the data
 T is the trend component
 C is the cycle component

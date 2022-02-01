@@ -7,7 +7,7 @@
 stsm_check_exo(exo, y)
 }
 \arguments{
-\item{exo}{exo datagenous}
+\item{exo}{matrix of exogenous data}
 
 \item{y}{input data y}
 }

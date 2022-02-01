@@ -34,16 +34,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // kalman_filter
-Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt, const arma::mat& X, bool smooth);
-RcppExport SEXP _autostsm_kalman_filter(SEXP spSEXP, SEXP ytSEXP, SEXP XSEXP, SEXP smoothSEXP) {
+Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt, const arma::mat& Xo, const arma::mat& Xs, bool smooth);
+RcppExport SEXP _autostsm_kalman_filter(SEXP spSEXP, SEXP ytSEXP, SEXP XoSEXP, SEXP XsSEXP, SEXP smoothSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::List& >::type sp(spSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type yt(ytSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Xo(XoSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Xs(XsSEXP);
     Rcpp::traits::input_parameter< bool >::type smooth(smoothSEXP);
-    rcpp_result_gen = Rcpp::wrap(kalman_filter(sp, yt, X, smooth));
+    rcpp_result_gen = Rcpp::wrap(kalman_filter(sp, yt, Xo, Xs, smooth));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -51,7 +52,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_autostsm_Rginv", (DL_FUNC) &_autostsm_Rginv, 1},
     {"_autostsm_gen_inv", (DL_FUNC) &_autostsm_gen_inv, 1},
-    {"_autostsm_kalman_filter", (DL_FUNC) &_autostsm_kalman_filter, 4},
+    {"_autostsm_kalman_filter", (DL_FUNC) &_autostsm_kalman_filter, 5},
     {NULL, NULL, 0}
 };
 

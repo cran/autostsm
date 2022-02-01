@@ -8,7 +8,8 @@ stsm_detect_anomalies(
   model,
   y = NULL,
   freq = NULL,
-  exo = NULL,
+  exo_obs = NULL,
+  exo_state = NULL,
   sig_level = 0.01,
   smooth = TRUE,
   plot = FALSE
@@ -21,7 +22,9 @@ stsm_detect_anomalies(
 
 \item{freq}{Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected}
 
-\item{exo}{Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.}
+\item{exo_obs}{Matrix of exogenous variables to be used in the observation equation.}
+
+\item{exo_state}{Matrix of exogenous variables to be used in the state matrix.}
 
 \item{sig_level}{Significance level to determine statistically significant anomalies}
 

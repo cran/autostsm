@@ -4,10 +4,12 @@
 \alias{stsm_format_exo}
 \title{Format exo}
 \usage{
-stsm_format_exo(exo, dates, range)
+stsm_format_exo(exo_obs, exo_state, dates, range)
 }
 \arguments{
-\item{exo}{exogenous data}
+\item{exo_obs}{exogenous observation data}
+
+\item{exo_state}{exogenous state data}
 
 \item{dates}{dates vector}
 

@@ -91,6 +91,42 @@ knitr::opts_chunk$set(
 ## -----------------------------------------------------------------------------
 #  library(autostsm)
 #  
+#  #Define the exogenous data
+#  exo_obs = data.table(date = ts$date, Xo = rnorm(nrow(ts)))
+#  exo_state = data.table(date = ts$date, Xs_trend = rnorm(nrow(ts)),
+#                         Xs_seasonal = rep(0, nrow(ts)))
+#  exo_state[seq(1, .N, by = 7), "Xs_seasonal" := 1]
+#  
+#  #Estimate the model
+#  stsm = stsm_estimate(ts[, c("date", "y"), with = FALSE],
+#                       exo_obs = exo_obs, exo_state = exo_state,
+#                       state_eqns = c("trend ~ Xs_trend - 1", "seasonal ~ Xs_seasonal - 1"),
+#                       verbose = TRUE)
+#  
+#  #Check the exogenous parameter estimates
+#  stsm_ssm(model = stsm)[c("betaO", "betaS")]
+#  
+#  #Filter and plot the results
+#  stsm_fc = stsm_filter(stsm, y = ts[, c("date", "y"), with = FALSE],
+#                        exo_obs = exo_obs, exo_state = exo_state, plot = TRUE)
+#  
+#  #Detect anomalies
+#  stsm_fc = merge(stsm_fc,
+#                  stsm_detect_anomalies(stsm, y = ts[, c("date", "y"), with = FALSE],
+#                                         exo_obs = exo_obs, exo_state = exo_state, plot = TRUE),
+#                  by = "date", all = TRUE)
+#  
+#  #Detect structural breaks
+#  stsm_fc = merge(stsm_fc,
+#                  stsm_detect_breaks(stsm, y = ts[, c("date", "y"), with = FALSE],
+#                                     exo_obs = exo_obs, exo_state = exo_state,
+#                                     plot = TRUE, show_progress = TRUE),
+#                  by = "date", all = TRUE)
+#  
+
+## -----------------------------------------------------------------------------
+#  library(autostsm)
+#  
 #  ##### Unemployment rate examples #####
 #  #Not seasonally adjusted
 #  data("UNRATENSA", package = "autostsm") #From FRED
@@ -350,7 +386,8 @@ knitr::opts_chunk$set(
 #  UNRATE[, "y_avg" := frollmean(y, n = 3, align = "right")]
 #  
 #  #Cycle taken from previous example
-#  stsm = stsm_estimate(y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], cycle = 156/3,
+#  stsm = stsm_estimate(y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"],
+#                       seasons = FALSE, cycle = 156/3,
 #                       interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
 #  stsm_fc = stsm_filter(stsm, y = UNRATE[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], plot = TRUE)
 #  stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")],
@@ -377,7 +414,9 @@ knitr::opts_chunk$set(
 #  DGS5[, "qtr" := ceiling_date(date, "quarter") %m-% months(1)]
 #  DGS5[, "y_avg" := frollmean(y, n = 3, align = "right")]
 #  
-#  stsm = stsm_estimate(y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], seasons = FALSE,
+#  #Cycle taken from previous example
+#  stsm = stsm_estimate(y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"],
+#                       seasons = FALSE, cycle = 112/3,
 #                       interpolate = "monthly", interpolate_method = "avg", verbose = TRUE)
 #  stsm_fc = stsm_filter(stsm, y = DGS5[, .(y = mean(y, na.rm = TRUE)), by = "qtr"], plot = TRUE)
 #  stsm_fc = merge(stsm_fc[, c("date", "observed", "interpolated")],

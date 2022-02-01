@@ -7,7 +7,7 @@
 #' detects the frequency and checks for a seasonal and cycle component if the user does not specify
 #' the frequency or decomposition model. This can be turned off by setting freq or specifying decomp.
 #' State space model for decomposition follows
-#' Yt = T_t + C_t + S_t + A*X_t + e_t, e_t ~ N(0, sig_e^2)
+#' Yt = T_t + C_t + S_t + B*X_t + e_t, e_t ~ N(0, sig_e^2)
 #' Y is the data
 #' T is the trend component
 #' C is the cycle component
@@ -15,7 +15,12 @@
 #' X is the exogenous data with parameter vector B
 #' e is the observation error
 #' @param y Univariate time series of data values. May also be a 2 column data frame containing a date column.
-#' @param exo Matrix of exogenous variables. Can be used to specify regression effects or other seasonal effects like holidays, etc.
+#' @param exo_obs Matrix of exogenous variables to be used in the observation equation. 
+#' @param exo_state Matrix of exogenous variables to be used in the state matrix. 
+#' @param state_eqns Character vector of equations to apply exo_state to the unobserved components. If left as the default, then all variables in
+#' exo_state will be applied to all the unobserved components. The equations should look like:
+#' "trend ~ var - 1", "drift ~ var - 1", "cycle ~ var - 1", "seasonal ~ var - 1".
+#' If only some equations are specified, it will be assumed that the exogenous data will be applied to only those specified equations. 
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
 #' @param seasons The seasonal periods: i.e. c(365.25, 7 if yearly and weekly seasonality). Default is NULL and will be estimated via wavelet analysis. 
 #' Can set to FALSE if want no seasonality
@@ -87,12 +92,12 @@
 #' stsm = stsm_estimate(NA000334Q)
 #' }
 #' @export
-stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
+stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL, freq = NULL, decomp = NULL, trend = NULL, unconstrained = FALSE, saturating_growth = FALSE,
                          multiplicative = NULL, par = NULL, seasons = NULL, cycle = NULL, arma = c(p = NA, q = NA), interpolate = NA, interpolate_method = NA,
                          det_obs = FALSE, det_trend = NULL, det_seas = FALSE, det_drift = FALSE, det_cycle = FALSE,
                          sig_level = NULL, sig_level_seas = NULL, sig_level_cycle = NULL, sig_level_trend = NULL, 
                          optim_methods = c("BFGS", "NM", "CG", "SANN"), maxit = 10000, verbose = FALSE, cores = NULL){
-  #exo = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = sig_level = sig_level_seas = sig_level_trend = sig_level_cycle = NULL
+  #exo_obs = exo_state = state_eqns = freq = decomp = trend = multiplicative = par = seasons = cycle = det_trend = cores = sig_level = sig_level_seas = sig_level_trend = sig_level_cycle = NULL
   #interpolate = interpolate_method = NA
   #det_obs = det_seas = det_drift = det_cycle = unconstrained = saturating_growth = FALSE
   #arma = c(p = NA, q = NA)
@@ -180,8 +185,14 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
     sig_level_cycle = ifelse(!is.null(sig_level_cycle), sig_level_cycle, sig_level)
     sig_level_trend = ifelse(!is.null(sig_level_trend), sig_level_trend, sig_level)
   }
+  if(!is.null(exo_obs) & !is.null(exo_state)){
+    if(nrow(exo_obs) != nrow(exo_state)){
+      stop("exo_obs and exo_state must have the same number of rows")
+    }
+  }
   stsm_check_y(y)
-  stsm_check_exo(exo, y)
+  stsm_check_exo(exo_obs, y)
+  stsm_check_exo(exo_state, y)
   
   #Get the frequency of the data
   y = stsm_detect_frequency(y, freq)
@@ -196,7 +207,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   range = which(!is.na(y))
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
-  exo = stsm_format_exo(exo, dates, range)
+  exo = stsm_format_exo(exo_obs, exo_state, dates, range)
   
   #Interpolate dates
   if(!is.na(interpolate)){
@@ -299,7 +310,8 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   }
   
   #Check for stationarity of an ARMA cycle
-  if(ifelse(length(cycle) > 0, cycle == "arma", TRUE) & is.null(user_set_cycle)){
+  if(ifelse(length(cycle) > 0, cycle == "arma", FALSE) & 
+     ifelse(!is.null(user_set_cycle), user_set_cycle != "arma", TRUE)){
     if(verbose == TRUE){
       message("Checking for a stationary cycle...")
     }
@@ -310,6 +322,9 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
       forecast::ndiffs(stats::na.omit(y - prior$seasonal - prior$trend), test = "kpss", type = "level", alpha = sig_level_trend, max.d = 2, lags = "long"))
     ndiffs = round(mean(ndiffs, na.rm = TRUE))
     if(ndiffs > 0){
+      if(verbose == TRUE){
+        "Stationary cycle not found. Removing cycle from model."
+      }
       cycle = numeric(0)
       prior = stsm_prior(y, freq*int_per, seasons = seasons, cycle = cycle)
     }
@@ -378,18 +393,30 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Set the initial parameter values
   if(is.null(par)){
     par = stsm_init_pars(y, freq*int_per, trend, cycle, decomp, seasons, prior, sig_level, 
-                         arma, interpolate)
+                         arma, exo, state_eqns, interpolate, interpolate_method)
   }
   
   #Set any fixed parameters
   fixed = stsm_fixed_pars(par, y, det_obs, det_trend, det_drift, det_cycle, 
-                          det_seas, saturating_growth, exo)
+                          det_seas, saturating_growth)
   par = fixed[["par"]]
-  X = fixed[["X"]]
   fixed = fixed[["fixed"]]
   if(is.numeric(user_set_cycle)){
     fixed = c(fixed, "lambda")
   }
+  
+  #Set the exogenous matrices
+  if(is.null(exo)){
+    X = t(matrix(0, nrow = length(y), ncol = 2))
+    rownames(X) = c("obs.Xo", "state.Xs")
+  }else{
+    X = t(exo)
+  }
+  Xo = matrix(X[grepl("obs\\.", rownames(X))], nrow = sum(grepl("obs\\.", rownames(X))), ncol = length(y), 
+              dimnames = list(rownames(X)[grepl("obs\\.", rownames(X))], NULL))
+  Xs = matrix(X[grepl("state\\.", rownames(X))], nrow = sum(grepl("state\\.", rownames(X))), ncol = length(y), 
+              dimnames = list(rownames(X)[grepl("state\\.", rownames(X))], NULL))
+  yt = matrix(y, nrow = 1)
   
   ###### Initial values for the unobserved components #####
   ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, freq = freq, seasons = seasons, 
@@ -409,10 +436,10 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Test that constraints hold for initial parameter values: constraints[[1]] %*% matrix(par, ncol = 1) > -constraints[[2]]
   
   #Define the objective function
-  objective = function(par, yt, freq, decomp, trend, init, interpolate, interpolate_method){
+  objective = function(par, yt, Xo, Xs, freq, decomp, trend, init, interpolate, interpolate_method){
     ssm = stsm_ssm(par, yt, decomp, trend, init, freq = freq, 
                    interpolate = interpolate, interpolate_method = interpolate_method)
-    ans = kalman_filter(ssm, yt, X, smooth = FALSE)
+    ans = kalman_filter(ssm, yt, Xo, Xs, smooth = FALSE)
     return(ans$loglik)
   }
   
@@ -425,7 +452,7 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
                                   start = par, method = o, fixed = fixed,
                                   finalHessian = FALSE, hess = NULL, control = list(printLevel = ifelse(verbose == TRUE, 2, 0), iterlim = maxit),
                                   constraints = constraints, 
-                                  yt = matrix(y, nrow = 1), freq = freq, decomp = decomp, trend = trend, init = init,
+                                  yt = yt, Xo = Xo, Xs = Xs, freq = freq, decomp = decomp, trend = trend, init = init,
                                   interpolate = interpolate, interpolate_method = interpolate_method),
                    error = function(err){NULL})
     if(!is.null(out)){
@@ -446,16 +473,18 @@ stsm_estimate = function(y, exo = NULL, freq = NULL, decomp = NULL, trend = NULL
   #Retrieve the model output
   out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"] = 
     abs(out$estimate[grepl("sig_", names(out$estimate)) | names(out$estimate) == "P0"])
-  k = length(out$estimate) - 1
+  k = length(out$estimate) - 1 - length(fixed) #Don't count P0 or fixed parameters as estimated parameters
   n = length(y[!is.na(y)])
+  aic = as.numeric(2*k - 2*stats::logLik(out))
+  aicc = as.numeric(aic + (2*k^2 + 2*k)/(n - k - 1))
+  bic = as.numeric(k*log(n) - 2*stats::logLik(out))
   fit = suppressWarnings(data.table(trend = trend, freq = freq, freq_name = freq_name, standard_freq = standard_freq,
                                     seasons = paste(seasons, collapse = ", "),
                                     cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
                                     decomp = decomp, multiplicative = multiplicative, 
                                     interpolate = interpolate, interpolate_method = interpolate_method,
                                     convergence = (out$code == 0), 
-                                    loglik = out$maximum, BIC = k*log(n) - 2*stats::logLik(out),
-                                    AIC = stats::AIC(out), AICc = stats::AIC(out) + (2*k^2 + 2*k)/(n - k - 1),
+                                    loglik = out$maximum, BIC = bic, AIC = aic, AICc = aicc,
                                     coef = paste(paste(names(stats::coef(out)), unname(stats::coef(out)), sep = " = "), collapse = ", ")
   ))
   # if(multiplicative == T){

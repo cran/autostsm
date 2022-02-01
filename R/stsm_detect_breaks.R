@@ -5,7 +5,8 @@
 #' @param components Vector of components to test for structural breaks
 #' @param y Univariate time series of data values. May also be a 2 column data frame containing a date column.
 #' @param freq Frequency of the data (1 (yearly), 4 (quarterly), 12 (monthly), 365.25/7 (weekly), 365.25 (daily)), default is NULL and will be automatically detected
-#' @param exo Matrix of exogenous variables used for the historical data. Can be used to specify regression effects or other seasonal effects like holidays, etc.
+#' @param exo_obs Matrix of exogenous variables to be used in the observation equation. 
+#' @param exo_state Matrix of exogenous variables to be used in the state matrix. 
 #' @param plot Whether to plot everything
 #' @param sig_level Significance level to determine statistically significant anomalies
 #' @param ci Confidence interval, value between 0 and 1 exclusive.
@@ -29,7 +30,7 @@
 #' breaks = stsm_detect_breaks(model = stsm, y = NA000334Q, plot = TRUE, cores = 2)
 #' }
 #' @export
-stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "seasonal"), freq = NULL, exo = NULL, 
+stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "seasonal"), freq = NULL, exo_obs = NULL, exo_state = NULL, 
                               sig_level = 0.01, ci = 0.8, smooth = TRUE, plot = FALSE, cores = NULL, show_progress = FALSE){
   #model = stsm
   #sig_level = 0.01
@@ -81,7 +82,8 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     }
   }
   stsm_check_y(y)
-  stsm_check_exo(exo, y)
+  stsm_check_exo(exo_obs, y)
+  stsm_check_exo(exo_state, y)
   
   #Get the frequency of the data
   y = stsm_detect_frequency(y, freq)
@@ -99,15 +101,22 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   range = which(!is.na(y))
   y = unname(y[range[1]:range[length(range)]])
   dates = dates[range[1]:range[length(range)]]
-  exo = stsm_format_exo(exo, dates, range)
+  exo = stsm_format_exo(exo_obs, exo_state, dates, range)
   
   #Set the historical exogenous variables
-  if(is.null(exo)){
-    X = t(matrix(0, nrow = length(y), ncol = 1))
-    X[is.na(X)] = 0
-    rownames(X) = "X"
+  if(is.null(exo_obs)){
+    Xo = t(matrix(0, nrow = length(y), ncol = 1))
+    Xo[is.na(Xo)] = 0
+    rownames(Xo) = "Xo"
   }else{
-    X = t(exo)
+    Xo = t(exo[, grepl("obs\\.", colnames(exo)), with = FALSE])
+  }
+  if(is.null(exo_state)){
+    Xs = t(matrix(0, nrow = length(y), ncol = 1))
+    Xs[is.na(Xs)] = 0
+    rownames(Xs) = "Xs"
+  }else{
+    Xs = t(exo[, grepl("state\\.", colnames(exo)), with = FALSE])
   }
   
   #Apply multiplicative model
@@ -129,8 +138,8 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), X, smooth)$B_tt, type = "message")
-  rownames(B_tt) = rownames(ssm$Fm)
+  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth)$B_tt, type = "message")
+  rownames(B_tt) = rownames(ssm[["Fm"]])
   
   #Get the unobserved series
   series = data.table(t(B_tt))
