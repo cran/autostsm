@@ -1,24 +1,40 @@
 
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
 # autostsm
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-`autostsm` (Automatic Structural Time Series Model) is designed to automatically detect the appropriate decomposition for a univariate time series into trend, seasonal, and cycle components using a state space approach. The package also has the functionality perform structural interpolation: i.e. interpolated a quarterly series into a monthly series using either end of period, period average, or period sum methods. The unobserved components are estimated with the Kalman filter and all model parameters are estimated using maximum likelihood. The Kalman filter and smoother are implemented in `Rcpp` so it is reasonably fast. This package is designed to handle time series of any frequency (standard or not), series with multiple seasonalities, seasonalities with fractional periodicities, missing data imputation, and irregularly spaced dates (i.e. daily data with missing data due to weekends and holidays, etc.).
+`autostsm` (Automatic Structural Time Series Model) is designed to
+automatically detect the appropriate decomposition for a univariate time
+series into trend, seasonal, and cycle components using a state space
+approach. The package also has the functionality perform structural
+interpolation: i.e. interpolated a quarterly series into a monthly
+series using either end of period, period average, or period sum
+methods. The unobserved components are estimated with the Kalman filter
+and all model parameters are estimated using maximum likelihood. The
+Kalman filter and smoother are implemented in `Rcpp` so it is reasonably
+fast. This package is designed to handle time series of any frequency
+(standard or not), series with multiple seasonalities, seasonalities
+with fractional periodicities, missing data imputation, and irregularly
+spaced dates (i.e. daily data with missing data due to weekends and
+holidays, etc.).
 
 ## Installation
 
 You can install the development version of `autostsm` like so:
 
-```{r, eval = FALSE}
+``` r
 devtools::install_git("https://bitbucket.org/ajhubb/autostsm.git")
 ```
 
 ## Example
 
-This is a basic example which shows you how to use the package on some example data. See the vignette for more examples:
+This is a basic example which shows you how to use the package on some
+example data. See the vignette for more examples:
 
-```{r, eval = FALSE}
+``` r
 library(autostsm)
 
 ##### Unemployment rate #####
@@ -37,4 +53,3 @@ stsm_fc = merge(stsm_fc,
                 stsm_detect_breaks(stsm, y = UNRATENSA, plot = TRUE, show_progress = TRUE), 
                 by = "date", all = TRUE)
 ```
-

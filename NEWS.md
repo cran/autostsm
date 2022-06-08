@@ -1,8 +1,15 @@
+# autostsm 3.0.1
+
+## Bug fixes
+
+* setting deterministic models wrongly set other parameters to fixed
+* build issues forced package to no longer depend on data.table but imports it
+
 # autostsm 3.0
 
 ## Major changes
 
-* Added ability to use exogenous date in the observation and/or state equations with options to specify what variables enter the equation for each unobserved components using R's formula syntax
+* Added ability to use exogenous data in the observation and/or state equations with options to specify what variables enter the equation for each unobserved components using R's formula syntax
 
 ## Bug fixes
 

@@ -10,6 +10,7 @@ knitr::opts_chunk$set(
 #  library(gridExtra)
 #  library(autostsm)
 #  library(lubridate)
+#  library(data.table)
 #  
 #  set.seed(1024)
 #  
@@ -90,6 +91,7 @@ knitr::opts_chunk$set(
 
 ## -----------------------------------------------------------------------------
 #  library(autostsm)
+#  library(data.table)
 #  
 #  #Define the exogenous data
 #  exo_obs = data.table(date = ts$date, Xo = rnorm(nrow(ts)))
@@ -126,6 +128,7 @@ knitr::opts_chunk$set(
 
 ## -----------------------------------------------------------------------------
 #  library(autostsm)
+#  library(data.table)
 #  
 #  ##### Unemployment rate examples #####
 #  #Not seasonally adjusted
@@ -225,6 +228,7 @@ knitr::opts_chunk$set(
 #  library(ggplot2)
 #  library(autostsm)
 #  library(lubridate)
+#  library(data.table)
 #  
 #  #Rebuild the data
 #  set.seed(1024)
@@ -345,6 +349,7 @@ knitr::opts_chunk$set(
 #  library(ggplot2)
 #  library(autostsm)
 #  library(lubridate)
+#  library(data.table)
 #  
 #  ##### Unemployment rate examples #####
 #  #Not seasonally adjusted

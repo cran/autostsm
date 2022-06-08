@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 `autostm` (Automatic Structural Time Series Model) is designed to automatically detect the appropriate decomposition for a univariate time series into trend, seasonal, and cycle components using a state space approach. The package also has the functionality perform structural interpolation: i.e. interpolated a quarterly series into a monthly series using either end of period, period average, or period sum methods. The unobserved components are estimated with the Kalman filter and all model parameters are estimated using maximum likelihood. The Kalman filter and smoother are implemented in `Rcpp` so it is reasonably fast. This package is designed to handle time series of any frequency (standard or not), series with multiple seasonalities, seasonalities with fractional periodicities, missing data imputation, and irregularly spaced dates (i.e. daily data with missing data due to weekends and holidays, etc.).
 
 
-With ease-of-use in mind, all the user has to do is provide a two column data frame: one column with dates and one column with the univariate time series. Everything else is handled by the algorithm including data frequency detection (observations per year), trend specification, cycle specification, seasonal specification, missing data imputation, anomaly detection, structural break detection, and whether or not to log transform the data. The user can manually set the preferred decomposition if desired, however. All components are assumed to be stochastic, which allows for time-varying trend, cycle, and seasonalities, unless the user specifies otherwise using the `det_trend`, `det_drift`, `det_seas`, `det_cycle`, and `det_obs` arguments in `stsm_estimate`. The algorithm can handle secondly, minutely, hourly, daily, monthly, and quarterly frequencies as well as daily data that is weekday only. It is also capable of handling non-standard frequencies (i.e. frequencies that are non of the above). To build an intepolation model, all the user has to do is set `interpolate` and `interpolate_method`. The user only needs to call `stsm_estimate` to fit the model and `stsm_forecast` to filter and forecast the data. Additionally, the user can call `stsm_detect_anomalies` and `stsm_detect_breaks` to perform anomaly and structural break detection respectively. 
+With ease-of-use in mind, all the user has to do is provide a two column data frame: one column with dates and one column with the univariate time series. Everything else is handled by the algorithm including data frequency detection (observations per year), trend specification, cycle specification, seasonal specification, missing data imputation, anomaly detection, structural break detection, and whether or not to log transform the data. The user can manually set the preferred decomposition if desired, however. All components are assumed to be stochastic, which allows for time-varying trend, cycle, and seasonalities, unless the user specifies otherwise using the `det_trend`, `det_drift`, `det_seas`, `det_cycle`, and `det_obs` arguments in `stsm_estimate`. The algorithm can handle secondly, minutely, hourly, daily, monthly, and quarterly frequencies as well as daily data that is weekday only. It is also capable of handling non-standard frequencies (i.e. frequencies that are non of the above). To build an interpolation model, all the user has to do is set `interpolate` and `interpolate_method`. The user only needs to call `stsm_estimate` to fit the model and `stsm_forecast` to filter and forecast the data. Additionally, the user can call `stsm_detect_anomalies` and `stsm_detect_breaks` to perform anomaly and structural break detection respectively. 
 
 # State Space Model
 
@@ -210,13 +210,13 @@ Next, is a test for constant seasonal and cycle amplitudes using the Cox-Stuart 
 
 The final step is to determine the specification of the trend after adjusting for the cycle and seasonality detected from the prior steps. This mainly boils down to determining if the data is integrated of order 0, 1, or 2 (I(0), I(1), or I(2)). To determine the number of differences to make the data stationary, the ADF, PP, and KPSS tests are performed on the seasonal and cycle adjusted data using the `forecast` package's `ndiffs` functions on the seasonal adjusted time series. However, since this test is sensitive to outliers, outliers in the seasonal and cycle adjusted series are detected and replaced using the `forecast`'s package `tsclean` function without replacing missing values before the test is performed.
 
-The number of differences selected for the trend specification is the average number of differences across the test, rounded to the nearest digit. Next, the Cox-Stuart trend test is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
+The number of differences selected for the trend specification is the average number of differences across the tests, rounded to the nearest digit. Next, the Cox-Stuart trend test is preformed on the seasonal and cycle adjusted data to determine if the data is trending. If the data is trending, the order of integration is set to at least 1. 
 
-If the order of integration is set to 1 at this point, the algorithm will then check for structural breaks in the mean drift using the `breakpoints` function from the `strucchange` package as long as the minimum prior drift is below 0. If the average value of the prior drift changes sign (from positive to negative, or negative to positive) between break segments, then the order of integration is set to 2. 
+If the order of integration is set to 1 at this point, the algorithm will then check for structural breaks in the drift using the `breakpoints` function from the `strucchange` package as long as the minimum prior drift is below 0. If the average value of the prior drift changes sign (from positive to negative, or negative to positive) between break segments, then the order of integration is set to 2. 
 
 If the data is determined to be 
 
-- I(2), then the "double-random-walk" specification is used
+- I(2) then the "double-random-walk" specification is used
 - I(1) with a trend, then the "random-walk-drift" specification is used
 - I(1) without a trend, then the "random-walk" specification is used
 - I(0) and no trend, then the "random-walk" trend specification with a deterministic trend is used to model a constant mean with an autoregressive component
@@ -412,6 +412,7 @@ library(ggplot2)
 library(gridExtra)
 library(autostsm)
 library(lubridate)
+library(data.table)
 
 set.seed(1024)
 
@@ -495,6 +496,7 @@ stsm_fc = merge(stsm_fc,
 
 ```{r}
 library(autostsm)
+library(data.table)
 
 #Define the exogenous data
 exo_obs = data.table(date = ts$date, Xo = rnorm(nrow(ts)))
@@ -534,6 +536,7 @@ stsm_fc = merge(stsm_fc,
 
 ```{r}
 library(autostsm)
+library(data.table)
 
 ##### Unemployment rate examples #####
 #Not seasonally adjusted
@@ -636,6 +639,7 @@ stsm_fc = merge(stsm_fc,
 library(ggplot2)
 library(autostsm)
 library(lubridate)
+library(data.table)
 
 #Rebuild the data
 set.seed(1024)
@@ -758,6 +762,7 @@ rbind(eop.err, avg.err, sum.err, use.names = TRUE, fill = TRUE)
 library(ggplot2)
 library(autostsm)
 library(lubridate)
+library(data.table)
 
 ##### Unemployment rate examples #####
 #Not seasonally adjusted

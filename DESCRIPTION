@@ -1,24 +1,25 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 3.0.0
-Date: 2022-02-01
+Version: 3.0.1
+Date: 2022-06-01
 Author: Alex Hubbard
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Description: Automatic model selection for structural time series decomposition into trend, cycle, and seasonal components, plus optionality for structural interpolation, using the Kalman filter. 
   Koopman, Siem Jan and Marius Ooms (2012) "Forecasting Economic Time Series Using Unobserved Components Time Series Models" <doi:10.1093/oxfordhb/9780195398649.013.0006>.
   Kim, Chang-Jin and Charles R. Nelson (1999) "State-Space Models with Regime Switching: Classical and Gibbs-Sampling Approaches with Applications" <doi:10.7551/mitpress/6444.001.0001><http://econ.korea.ac.kr/~cjkim/>. 
 License: GPL (>= 2)
-Imports: maxLik (>= 1.5), forecast (>= 8.15), lubridate (>= 1.7),
+Imports: maxLik (>= 1.5-2), forecast (>= 8.15), lubridate (>= 1.7),
         ggplot2 (>= 3.3), gridExtra (>= 2.3), strucchange (>= 1.5),
-        foreach (>= 1.5), doSNOW (>= 1.0), parallel (>= 4.1), lmtest
-        (>= 0.9), ggrepel(>= 0.9), progress (>= 1.2), sandwich (>= 3.0)
-Depends: R (>= 3.5.0), data.table (>= 1.14)
+        foreach (>= 1.5), doSNOW (>= 1.0.19), parallel (>= 4.1.1),
+        lmtest (>= 0.9-38), ggrepel(>= 0.9), progress (>= 1.2),
+        sandwich (>= 3.0), data.table (>= 1.14)
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2022-01-31 23:10:43 UTC; alex.hubbard
+Packaged: 2022-06-07 21:43:31 UTC; alex.hubbard
+Depends: R (>= 3.5.0)
 Repository: CRAN
-Date/Publication: 2022-02-01 08:00:02 UTC
+Date/Publication: 2022-06-08 06:40:06 UTC

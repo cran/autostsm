@@ -63,9 +63,9 @@ stsm_fixed_pars = function(par, y, det_obs = FALSE, det_trend = FALSE, det_drift
   }
   if(det_seas == TRUE){
     if("sig_e" %in% names(par) & det_obs == FALSE){
-      par["sig_e"] = par["sig_e"] + par["sig_s"]
+      par["sig_e"] = par["sig_e"] + sum(par[grepl("sig_s", names(par))])
     }else if("sig_c" %in% names(par) & det_cycle == FALSE){
-      par["sig_c"] = par["sig_c"] + par["sig_s"]
+      par["sig_c"] = par["sig_c"] + sum(par[grepl("sig_s", names(par))])
     }
     par[grepl("sig_s", names(par))] = 0
     fixed = c(fixed, names(par)[grepl("sig_s", names(par))])

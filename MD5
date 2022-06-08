@@ -1,6 +1,6 @@
-230deeae165b85e099a885d2f5d18ffc *DESCRIPTION
+dc254279117a648e7561e06f38393774 *DESCRIPTION
 93b47c0238d072274eac2cbac7ef977c *NAMESPACE
-ff9157d6798eab803c6f059959db2801 *NEWS.md
+4ff31f435f5accc101ed3522399db356 *NEWS.md
 8625f02e6dcae6f69bb4a3022ad63c6e *R/RcppExports.R
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
@@ -15,7 +15,7 @@ a84d6dac9503c22699bc648323d14dd3 *R/stsm_detect_cycle.R
 4466f19007b59b99b2c460cae32e74f4 *R/stsm_detect_seasonality.R
 7110f0fb997d61f1519931c49044a4ee *R/stsm_detect_trend.R
 9ba0d3e69772dd168a6e0a80bad46a8c *R/stsm_estimate.R
-764bcab259cdbc087d7add3dd9b16b19 *R/stsm_fixed_pars.R
+2d8f09e7c7b3d4c76f1db8b309cd75c0 *R/stsm_fixed_pars.R
 23eb04c1873be5f58915ebc59788f59f *R/stsm_forecast.R
 39a75b7e458e6a52a09fc9fca5c05bda *R/stsm_init_pars.R
 691a0a0c7d43e1953a082dd783af3910 *R/stsm_na_kalman.R
@@ -23,7 +23,7 @@ a84d6dac9503c22699bc648323d14dd3 *R/stsm_detect_cycle.R
 d159d6ba4d5b079cd24c51749156dbba *R/stsm_ssm.R
 80f141bbb35967bb506fcf2c1084b052 *R/stsm_stat_tests.R
 76935420c002982cc253dec3a7388701 *R/zzz.R
-4617bf46802bc82dab8fd85a4f9465df *README.md
+6af5ca16d950cd9855ed7e3e39052471 *README.md
 09bd3b9f77495f39e90557285cb84e16 *build/vignette.rds
 650b604d22b942152c329196e63ada66 *data/DGS5.RData
 a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
@@ -31,9 +31,9 @@ a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
 4d8c16ff5e0466d6dd95ce7dba48ceaf *data/SP500.RData
 cdc27ae837de93c0c12c6cd541102bba *data/UNRATE.RData
 fb61b19775a81a942c3309055ba4fa36 *data/UNRATENSA.RData
-eac84062229d8ed27c3370c552de9fc1 *inst/doc/autostsm_vignette.R
-4f61f23e60849e5cd500f73a00fb20ed *inst/doc/autostsm_vignette.Rmd
-ec0c8a53f1e2bea028f02e46ce2b194f *inst/doc/autostsm_vignette.html
+6d504fc7b635e2bf934020832363a5ca *inst/doc/autostsm_vignette.R
+dceb0b748fb01bdcb57f66514cbc0a46 *inst/doc/autostsm_vignette.Rmd
+ceb2d24edacd919760c314953b7f532c *inst/doc/autostsm_vignette.html
 05da2df02f0a74441bbf5bccf916d0b0 *man/DGS5.Rd
 0c7705eb22ec5b94fcd7e6803a68b26d *man/GDP.Rd
 02d0083698b306e5565a2df9b924a213 *man/NA000334Q.Rd
@@ -69,4 +69,4 @@ c2f5ecdf7b08943d7a65feb579f8aedf *man/stsm_na_kalman.Rd
 61059660eb073d93e00e8ee054237071 *src/Makevars.win
 0ab96a0d25622ee5eaa5c3cc3ac77f37 *src/RcppExports.cpp
 7a1d952433390c080a3a82cc93cf44ff *src/kalmanfilter.cpp
-4f61f23e60849e5cd500f73a00fb20ed *vignettes/autostsm_vignette.Rmd
+dceb0b748fb01bdcb57f66514cbc0a46 *vignettes/autostsm_vignette.Rmd
