@@ -1,7 +1,7 @@
-dc254279117a648e7561e06f38393774 *DESCRIPTION
-93b47c0238d072274eac2cbac7ef977c *NAMESPACE
-4ff31f435f5accc101ed3522399db356 *NEWS.md
-8625f02e6dcae6f69bb4a3022ad63c6e *R/RcppExports.R
+e8e72b22b02b922d915c7bd2d2e5bb36 *DESCRIPTION
+3b3b91ea6ccf4cf078495aa69a40351d *NAMESPACE
+e1137a2cdeba82febb6e3695fd22c255 *NEWS.md
+200f4fb9064d390f55e18670878a8a96 *R/RcppExports.R
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
 a328332b1c42d73bb061f2052688fa51 *R/stsm_constraints.R
@@ -24,7 +24,7 @@ d159d6ba4d5b079cd24c51749156dbba *R/stsm_ssm.R
 80f141bbb35967bb506fcf2c1084b052 *R/stsm_stat_tests.R
 76935420c002982cc253dec3a7388701 *R/zzz.R
 6af5ca16d950cd9855ed7e3e39052471 *README.md
-09bd3b9f77495f39e90557285cb84e16 *build/vignette.rds
+61c043bd6582b226d434625a60812459 *build/vignette.rds
 650b604d22b942152c329196e63ada66 *data/DGS5.RData
 a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
 66511608e823414170902b591bf2c49a *data/NA000334Q.RData
@@ -33,14 +33,17 @@ cdc27ae837de93c0c12c6cd541102bba *data/UNRATE.RData
 fb61b19775a81a942c3309055ba4fa36 *data/UNRATENSA.RData
 6d504fc7b635e2bf934020832363a5ca *inst/doc/autostsm_vignette.R
 dceb0b748fb01bdcb57f66514cbc0a46 *inst/doc/autostsm_vignette.Rmd
-ceb2d24edacd919760c314953b7f532c *inst/doc/autostsm_vignette.html
+f270bb8503a9328ee104f3796fa3d06e *inst/doc/autostsm_vignette.html
 05da2df02f0a74441bbf5bccf916d0b0 *man/DGS5.Rd
 0c7705eb22ec5b94fcd7e6803a68b26d *man/GDP.Rd
 02d0083698b306e5565a2df9b924a213 *man/NA000334Q.Rd
+ad4d39c03d7349e35718ab4ffba435eb *man/Rginv.Rd
 3e5ea9564d85822575651bc666a14705 *man/SP500.Rd
 f274711a58a2812fd9551f30c3802e78 *man/UNRATE.Rd
 844de123aff6345867fae3c0d169c875 *man/UNRATENSA.Rd
 ca533986855ddbe692835ce865703dbb *man/autostsm.Rd
+690008bb2a64a68921639c27dfb66509 *man/gen_inv.Rd
+5ccef95114707fad3912edd315684901 *man/kalman_filter.Rd
 a9de71b0c8a16298ef8e803c9bbcfe0a *man/stsm_bdiag.Rd
 02d8de185ecd6b5f109f7187da1541b0 *man/stsm_build_dates.Rd
 3a9479dacb20a9e64b4f7f1fb9087191 *man/stsm_check_exo.Rd
@@ -68,5 +71,5 @@ c2f5ecdf7b08943d7a65feb579f8aedf *man/stsm_na_kalman.Rd
 61059660eb073d93e00e8ee054237071 *src/Makevars
 61059660eb073d93e00e8ee054237071 *src/Makevars.win
 0ab96a0d25622ee5eaa5c3cc3ac77f37 *src/RcppExports.cpp
-7a1d952433390c080a3a82cc93cf44ff *src/kalmanfilter.cpp
+48c5eb8453c1e1fdde7d04e2bdc53969 *src/kalmanfilter.cpp
 dceb0b748fb01bdcb57f66514cbc0a46 *vignettes/autostsm_vignette.Rmd

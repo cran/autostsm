@@ -1,3 +1,9 @@
+#autostsm 3.0.2
+
+## Minor Changes
+
+* updated Rcpp code to handle deprecation of << assignment operator
+
 # autostsm 3.0.1
 
 ## Bug fixes

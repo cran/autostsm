@@ -9,7 +9,9 @@
 #include <omp.h>
 #endif
 
-// R's implementation of the Moore-Penrose pseudo matrix inverse
+//' R's implementation of the Moore-Penrose pseudo matrix inverse
+//'
+//' @param m matrix
 // [[Rcpp::export]]
 arma::mat Rginv(const arma::mat& m){
   arma::mat U, V;
@@ -28,6 +30,9 @@ arma::mat Rginv(const arma::mat& m){
   }
 }
 
+//' Generalized matrix inverse
+//'
+//' @param m matrix
 // [[Rcpp::export]]
 arma::mat gen_inv(arma::mat& m){
   arma::mat out(m.n_rows, m.n_cols);
@@ -39,6 +44,13 @@ arma::mat gen_inv(arma::mat& m){
   return out;
 }
 
+//' Kalman Filter
+//'
+//' @param sp list describing the state space model
+//' @param yt matrix of data
+//' @param Xo matrix of exogenous observation data
+//' @param Xs matrix of exogenous state data
+//' @param smooth boolean indication whether to run the backwards smoother
 // [[Rcpp::export]]
 Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt, 
                          const arma::mat& Xo, const arma::mat& Xs, 
@@ -72,7 +84,7 @@ Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt,
   arma::cube F_t = arma::ones(n_rows, n_rows, n_cols)*R_PosInf;
   arma::cube K_t(Fm.n_rows, n_rows, n_cols);
   arma::uvec non_na_idx;
-  arma::uvec iv;
+  arma::uvec iv(1);
   arma::mat yt_pred(yt.n_rows, yt.n_cols);
   
   //Define some matrix transforms
@@ -105,7 +117,7 @@ Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt,
     
     //Final estimates conditional on t
     if(!non_na_idx.is_empty()){
-      iv << i;
+      iv[0] = i;
       //Final estimate of the unobserved values
       B_tt.col(i) = B_tl.col(i) + K_t.slice(i).cols(non_na_idx) * N_t.submat(non_na_idx, iv); 
       //Final estimate of the covariance matrix
@@ -157,6 +169,6 @@ Rcpp::List kalman_filter(Rcpp::List& sp, const arma::mat& yt,
 //compileAttributes(verbose=TRUE)
 //library(tools)
 //package_native_routine_registration_skeleton("path")
-//git config remote.origin.url git@github.com:user/autostsm.git
+//git config remote.origin.url https://ajhubb@bitbucket.org/ajhubb/autostsm.git
 
 //Rcpp::sourceCpp("src/kalmanfilter.cpp")
