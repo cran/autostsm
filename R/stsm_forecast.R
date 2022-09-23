@@ -18,8 +18,7 @@
 #' @param dampen_cycle Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence
 #' @param envelope_ci Whether to create a envelope for the confidence interval to smooth out seasonal fluctuations
 #' to the longest seasonal period
-#' @import data.table ggplot2
-#' @useDynLib autostsm, .registration=TRUE
+#' @import data.table ggplot2 kalmanfilter
 #' @return data table (or list of data tables) containing the filtered and/or smoothed series.
 #' @examples
 #' \dontrun{
@@ -47,7 +46,6 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
-  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
 
   #Bind data.table variables to the global environment
   fev = extrema = fitted = variable = value = cycle = seasonal = observed = remainder = 
@@ -204,13 +202,13 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
       }
     }
   }
-  msg = utils::capture.output(kf <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth), type = "message")
+  msg = utils::capture.output(kf <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth = smooth), type = "message")
   B_tt = kf[["B_tt"]]
   rownames(B_tt) = rownames(ssm[["Fm"]])
 
   #Get the unobserved series
   series = data.table(t(B_tt))
-  series$fitted = c(kf[["yt_pred"]])
+  series$fitted = c(kf[["y_tt"]])
   
   #Forecast
   if(n.ahead > 0){
@@ -579,8 +577,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
 #' @param plot Logical, whether to plot everything
 #' @param plot.decomp Logical, whether to plot the filtered historical data
 #' @param smooth Whether or not to use the Kalman smoother
-#' @import data.table ggplot2
-#' @useDynLib autostsm, .registration=TRUE
+#' @import data.table ggplot2 kalmanfilter
 #' @return data table (or list of data tables) containing the filtered and/or smoothed series.
 #' @examples
 #' \dontrun{

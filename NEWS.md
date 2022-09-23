@@ -1,3 +1,10 @@
+#autostsm 3.0.3
+
+## Minor changes
+
+* updated to use the kalmanfilter package rather than have its own internal Kalman filter routine, 
+the kalmanfilter package is actually the Kalman filter routine that was built in this package
+
 #autostsm 3.0.2
 
 ## Minor Changes

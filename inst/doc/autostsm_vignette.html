@@ -120,13 +120,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -391,11 +398,13 @@ Y_t = A + H \beta + B^o X^o_t + e_t, e_t \sim N(0, R)\\
 \beta_t = D + F \beta_{t-1} + B^s X^s_t + u_t, u_t \sim N(0, Q)
 \]</span></p>
 <p>where the first equation is the observation equation and the second
-equation is the transition equation. <span class="math inline">\(H\)</span> is the observation matrix and <span class="math inline">\(R\)</span> is the observation error-covariance
-matrix. <span class="math inline">\(\beta_t\)</span> is the vector of
-the unobserved components (trend, seasonal, and cycle), <span class="math inline">\(F\)</span> is the transition matrix, and <span class="math inline">\(Q\)</span> is the transition error-covariance
-matrix. <span class="math inline">\(X^s_t\)</span> is optional exogenous
-data in the state equation.</p>
+equation is the transition equation. <span class="math inline">\(A\)</span> is the observation intercept, <span class="math inline">\(H\)</span> is the observation matrix, <span class="math inline">\(e_t \sim N(0, R)\)</span> is the observation
+error, and <span class="math inline">\(R\)</span> is the observation
+error-covariance matrix. <span class="math inline">\(\beta_t\)</span> is
+the vector of the state components, <span class="math inline">\(D\)</span> is the state intercept matrix, <span class="math inline">\(F\)</span> is the transition matrix, <span class="math inline">\(X^s_t\)</span> is optional exogenous data in the
+state equation, <span class="math inline">\(v_t \sim N(0,
+Q_{s_t})\)</span> is the state error, and <span class="math inline">\(Q\)</span> is the state error-covariance
+matrix.</p>
 <div id="trend-models" class="section level2">
 <h2>Trend Models</h2>
 <p>If trend is “random-walk” the trend model is specified as the I(1)
@@ -768,14 +777,14 @@ unobserved components at time <span class="math inline">\(t\)</span> and
 does peak into the future to make that inference.</p>
 <div id="prediction-stage" class="section level3">
 <h3>Prediction Stage</h3>
-<p>The first stage is the prediction stage, which makes predictions on
-the unobserved components based on information up to time <span class="math inline">\(t-1\)</span>. This stage is made up of four
-equations, the first is the prediction of the unobserved components
-based on its time series properties</p>
+<p>The first stage is the prediction stage, which makes predictions of
+the state components based on information up to time <span class="math inline">\(t-1\)</span>. This stage is made up of four
+equations, the first is the prediction of the state components based on
+its time series properties</p>
 <p><span class="math display">\[
-B_{t|t-1} = \bar{D} + F \beta_{t-1|t-1} + B^s X^s_t
+B_{t|t-1} = D + F \beta_{t-1|t-1} + B^s X^s_t
 \]</span></p>
-<p>Second, is the prediction of the covariance matrix of the unobserved
+<p>Second, is the prediction of the covariance matrix of the state
 components</p>
 <p><span class="math display">\[
 P_{t|t-1} = F P_{t_1|t-1} F^{\prime} + Q
@@ -794,7 +803,7 @@ f_{t|t-1} = H P_{t|t-1} H^{\prime} + R
 <p>The second stage is the updating stage, which makes predictions based
 on all information up to time <span class="math inline">\(t\)</span>. It
 consists of three equations. The first equation is the prediction of the
-unobserved components based on the the full information set</p>
+state components based on the the full information set</p>
 <p><span class="math display">\[
 \beta_{t|t} = B_{t|t-1} + K_t \eta_{t|t-1}
 \]</span> where <span class="math inline">\(K_t\)</span> is the Kalman
@@ -820,18 +829,18 @@ f_{t|t-1} = \infty
 <div id="kalman-smoothing" class="section level3">
 <h3>Kalman Smoothing</h3>
 <p>Once the Kalman filter is applied to the data, a smoothing procedure
-can applied in the backward direction to make a better inference of the
-unobserved components based on the entire data set. Unlike the filter,
-the smoother does peak into the future to make an inference on the
-unobserved components at time <span class="math inline">\(t\)</span>.
-This procedure consists of only two equations.</p>
-<p>The first equation updates the prediction of the unobserved
-components based on all the available information</p>
+can be applied in the backward direction to make a better inference of
+the state components based on the entire data set. Unlike the filter,
+the smoother does peak into the future to make an inference of the state
+components at time <span class="math inline">\(t\)</span>. This
+procedure consists of only two equations.</p>
+<p>The first equation updates the prediction of the state components
+based on all the available information</p>
 <p><span class="math display">\[
 \beta_{t|T} = \beta_{t|t} + P_{t|t} F^{\prime} P_{t|t}^{-1}
 (\beta_{t+1|T} - \beta_{t+1|t})
 \]</span></p>
-<p>The second equation updates the covariance matrix of the unobserved
+<p>The second equation updates the covariance matrix of the state
 components based on all the available information</p>
 <p><span class="math display">\[
 P_{t|T} = P_{t|t} + P_{t|t} F^{\prime} P_{t+1|t}^{-1} (P_{t+1|T} -
@@ -847,7 +856,7 @@ likelihood is given by</p>
 ln(L(\theta)) = -\frac{1}{2} \sum_{t=1}^T \ln(|f_{t|t-1}|) -
 \frac{1}{2}\sum_{t=1}^T \eta_{t|t-1}^{\prime} f_{t|t-1}^{-1}
 \eta_{t|t-1}
-\]</span> for all values that are not missing.</p>
+\]</span></p>
 </div>
 <div id="initial-parameter-values" class="section level2">
 <h2>Initial Parameter Values</h2>

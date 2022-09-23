@@ -14,8 +14,7 @@
 #' @param cores Number of cores to use for break detection
 #' @param show_progress Whether to show progress bar
 #' @return data table (or list of data tables) containing the dates of detected anomalies from the filtered and/or smoothed series
-#' @import ggplot2 data.table foreach
-#' @useDynLib autostsm, .registration=TRUE
+#' @import ggplot2 data.table foreach kalmanfilter
 #' @examples
 #' \dontrun{
 #' #GDP Not seasonally adjusted
@@ -41,7 +40,6 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
-  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
   break_type = date.lag = date.lead = variable = j = x = value = 
@@ -138,7 +136,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth)$B_tt, type = "message")
+  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth = smooth)$B_tt, type = "message")
   rownames(B_tt) = rownames(ssm[["Fm"]])
   
   #Get the unobserved series

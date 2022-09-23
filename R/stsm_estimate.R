@@ -75,8 +75,7 @@
 #' @param interpolate_method Character string giving the interpolation method: 
 #' i.e. "eop" for end of period, "avg" for period average, or "sum" for period sum.
 #' @param cores Number of cores to use for seasonality and cycle detection
-#' @import data.table
-#' @useDynLib autostsm, .registration=TRUE
+#' @import data.table kalmanfilter
 #' @return List of estimation values including a data table with coefficients, convergence code, frequency, decomposition, seasonality, cyclicality, and trend specification
 #' as well as the a data table with the original data with dates. Any exogenous data given is also returned. 
 #' @examples
@@ -439,8 +438,7 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
   objective = function(par, yt, Xo, Xs, freq, decomp, trend, init, interpolate, interpolate_method){
     ssm = stsm_ssm(par, yt, decomp, trend, init, freq = freq, 
                    interpolate = interpolate, interpolate_method = interpolate_method)
-    ans = kalman_filter(ssm, yt, Xo, Xs, smooth = FALSE)
-    return(ans$loglik)
+    return(kalman_filter(ssm, yt, Xo, Xs, smooth = FALSE)$lnl)
   }
   
   #Estimate the model
@@ -495,11 +493,3 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
   # stsm_fc = stsm_filter(fit, y = data.table(date = dates[!is.na(y)], y = y), plot = TRUE, smooth = F)
   return(fit)
 }
-
-########
-#Call these to build the package
-#devtools::document()
-#devtools::build_vignettes()
-#devtools::install()
-#library(autostsm)
-#git config remote.origin.url git@github.com:user/autostsm.git

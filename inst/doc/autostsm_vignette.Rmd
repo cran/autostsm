@@ -36,7 +36,7 @@ Y_t = A + H \beta + B^o X^o_t + e_t, e_t \sim N(0, R)\\
 \beta_t = D + F \beta_{t-1} + B^s X^s_t + u_t, u_t \sim N(0, Q)
 $$
 
-where the first equation is the observation equation and the second equation is the transition equation. $H$ is the observation matrix and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the unobserved components (trend, seasonal, and cycle), $F$ is the transition matrix, and $Q$ is the transition error-covariance matrix. $X^s_t$ is optional exogenous data in the state equation.
+where the first equation is the observation equation and the second equation is the transition equation. $A$ is the observation intercept, $H$ is the observation matrix, $e_t \sim N(0, R)$ is the observation error, and $R$ is the observation error-covariance matrix. $\beta_t$ is the vector of the state components, $D$ is the state intercept matrix, $F$ is the transition matrix, $X^s_t$ is optional exogenous data in the state equation, $v_t \sim N(0, Q_{s_t})$ is the state error, and $Q$ is the state error-covariance matrix. 
 
 ## Trend Models
 
@@ -228,13 +228,13 @@ To estimate the unobserved components ($T_t, C_t, S_t$, and $D_t$), the Kalman f
 
 ### Prediction Stage
 
-The first stage is the prediction stage, which makes predictions on the unobserved components based on information up to time $t-1$. This stage is made up of four equations, the first is the prediction of the unobserved components based on its time series properties
+The first stage is the prediction stage, which makes predictions of the state components based on information up to time $t-1$. This stage is made up of four equations, the first is the prediction of the state components based on its time series properties
 
 $$
-B_{t|t-1} = \bar{D} + F \beta_{t-1|t-1} + B^s X^s_t
+B_{t|t-1} = D + F \beta_{t-1|t-1} + B^s X^s_t
 $$
 
-Second, is the prediction of the covariance matrix of the unobserved components
+Second, is the prediction of the covariance matrix of the state components
 
 $$
 P_{t|t-1} = F P_{t_1|t-1} F^{\prime} + Q
@@ -254,7 +254,7 @@ $$
 
 ### Updating Stage
 
-The second stage is the updating stage, which makes predictions based on all information up to time $t$. It consists of three equations. The first equation is the prediction of the unobserved components based on the the full information set
+The second stage is the updating stage, which makes predictions based on all information up to time $t$. It consists of three equations. The first equation is the prediction of the state components based on the the full information set
 
 $$
 \beta_{t|t} = B_{t|t-1} + K_t \eta_{t|t-1}
@@ -280,15 +280,15 @@ $$
 
 ### Kalman Smoothing
 
-Once the Kalman filter is applied to the data, a smoothing procedure can applied in the backward direction to make a better inference of the unobserved components based on the entire data set. Unlike the filter, the smoother does peak into the future to make an inference on the unobserved components at time $t$. This procedure consists of only two equations. 
+Once the Kalman filter is applied to the data, a smoothing procedure can be applied in the backward direction to make a better inference of the state components based on the entire data set. Unlike the filter, the smoother does peak into the future to make an inference of the state components at time $t$. This procedure consists of only two equations. 
 
-The first equation updates the prediction of the unobserved components based on all the available information
+The first equation updates the prediction of the state components based on all the available information
 
 $$
 \beta_{t|T} = \beta_{t|t} + P_{t|t} F^{\prime} P_{t|t}^{-1} (\beta_{t+1|T} - \beta_{t+1|t})
 $$
 
-The second equation updates the covariance matrix of the unobserved components based on all the available information
+The second equation updates the covariance matrix of the state components based on all the available information
 
 $$
 P_{t|T} = P_{t|t} + P_{t|t} F^{\prime} P_{t+1|t}^{-1} (P_{t+1|T} - P_{t+1|t}) P_{t+1|t}^{-1 \prime} F P_{t|t}^{\prime}
@@ -302,7 +302,6 @@ The model above is estimated using MLE with box constraints. The log likelihood 
 $$
 ln(L(\theta)) = -\frac{1}{2} \sum_{t=1}^T \ln(|f_{t|t-1}|) - \frac{1}{2}\sum_{t=1}^T \eta_{t|t-1}^{\prime} f_{t|t-1}^{-1} \eta_{t|t-1} 
 $$
-for all values that are not missing. 
 
 ## Initial Parameter Values
 

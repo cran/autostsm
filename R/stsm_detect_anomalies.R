@@ -10,8 +10,7 @@
 #' @param smooth Whether or not to use the Kalman smoother
 #' @param sig_level Significance level to determine statistically significant anomalies
 #' @return data table (or list of data tables) containing the dates of detected anomalies from the filtered and/or smoothed series
-#' @import ggplot2 data.table
-#' @useDynLib autostsm, .registration=TRUE
+#' @import ggplot2 data.table kalmanfilter
 #' @examples
 #' \dontrun{
 #' #GDP Not seasonally adjusted
@@ -35,7 +34,6 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo_obs = NULL, e
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
-  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
   
   #Bind data.table variables to the global environment
   anomaly = predicted = value = variable = observed = NULL
@@ -105,7 +103,7 @@ stsm_detect_anomalies = function(model, y = NULL, freq = NULL, exo_obs = NULL, e
   
   #Filter and smooth the data
   ssm = stsm_ssm(yt = y, model = model)
-  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth)$B_tt, type = "message")
+  msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth = smooth)$B_tt, type = "message")
   rownames(B_tt) = rownames(ssm[["Fm"]])
   
   #Get the unobserved series
