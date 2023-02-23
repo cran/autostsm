@@ -1,6 +1,6 @@
-e97b34358db1353ace0f6a74b59233bd *DESCRIPTION
+9e56c29bb98a5ddf6be26cf594252aef *DESCRIPTION
 3340ce0da15129120f4d78cfa4d35e32 *NAMESPACE
-2cf0f915241e38598bc4baf94cd43c81 *NEWS.md
+c72b73ace073b18f9dce9a1f2a88c249 *NEWS.md
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
 a328332b1c42d73bb061f2052688fa51 *R/stsm_constraints.R
@@ -15,7 +15,7 @@ a84d6dac9503c22699bc648323d14dd3 *R/stsm_detect_cycle.R
 7110f0fb997d61f1519931c49044a4ee *R/stsm_detect_trend.R
 976244305aeae6760a9dca8a72249b91 *R/stsm_estimate.R
 2d8f09e7c7b3d4c76f1db8b309cd75c0 *R/stsm_fixed_pars.R
-822afcef5fea980e095d4e73e38a290b *R/stsm_forecast.R
+1fc95d41d96f31c1979986b098492f7f *R/stsm_forecast.R
 39a75b7e458e6a52a09fc9fca5c05bda *R/stsm_init_pars.R
 691a0a0c7d43e1953a082dd783af3910 *R/stsm_na_kalman.R
 8b40e76bfaeb15ca2c5ccc90c247f708 *R/stsm_prior.R
@@ -32,7 +32,7 @@ cdc27ae837de93c0c12c6cd541102bba *data/UNRATE.RData
 fb61b19775a81a942c3309055ba4fa36 *data/UNRATENSA.RData
 6d504fc7b635e2bf934020832363a5ca *inst/doc/autostsm_vignette.R
 491d6c6fea076a0e2737406676a1ef55 *inst/doc/autostsm_vignette.Rmd
-ca4a6e8138a4b406ba5e9c90b6da749a *inst/doc/autostsm_vignette.html
+1b9d009a3a4fbd75950186e462a00643 *inst/doc/autostsm_vignette.html
 524220eba90cfec04da2f44ff0dbd244 *man/DGS5.Rd
 0c7705eb22ec5b94fcd7e6803a68b26d *man/GDP.Rd
 02d0083698b306e5565a2df9b924a213 *man/NA000334Q.Rd

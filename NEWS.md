@@ -1,3 +1,9 @@
+#autostsm 3.0.4
+
+## Minor changes
+
+* updated required version of kalmanfilter package
+
 #autostsm 3.0.3
 
 ## Minor changes
