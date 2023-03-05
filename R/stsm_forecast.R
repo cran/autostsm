@@ -46,6 +46,7 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
+  # library(kalmanfilter)
 
   #Bind data.table variables to the global environment
   fev = extrema = fitted = variable = value = cycle = seasonal = observed = remainder =
@@ -108,20 +109,35 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
     y = y$y
   }
 
+  #Apply multiplicative model
+  if(model$multiplicative == TRUE){
+    y = log(y)
+  }
+  
+  #Standardize
+  mean = mean(y, na.rm = TRUE)
+  sd = stats::sd(y, na.rm = TRUE)
+  y = (y - mean)/sd
+  
   #Set the historical exogenous variables
+  ssm = stsm_ssm(yt = y, model = model)
   if(is.null(exo_obs)){
     Xo = t(matrix(0, nrow = length(y), ncol = 1))
     Xo[is.na(Xo)] = 0
     rownames(Xo) = "Xo"
   }else{
-    Xo = t(exo[, grepl("obs\\.", colnames(exo)), with = FALSE])
+    Xo = exo[, paste0("obs.", colnames(ssm[["betaO"]])), with = FALSE]
+    setcolorder(Xo, paste0("obs.", colnames(ssm[["betaO"]])))
+    Xo = t(Xo)
   }
   if(is.null(exo_state)){
     Xs = t(matrix(0, nrow = length(y), ncol = 1))
     Xs[is.na(Xs)] = 0
     rownames(Xs) = "Xs"
   }else{
-    Xs = t(exo[, grepl("state\\.", colnames(exo)), with = FALSE])
+    Xs = exo[, paste0("state.", colnames(ssm[["betaS"]])), with = FALSE]
+    setcolorder(Xs, paste0("state.", colnames(ssm[["betaS"]])))
+    Xs = t(Xs)
   }
 
   #Set the forecast exogenous variables
@@ -131,6 +147,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
     }else{
       exo_obs.fc = as.data.table(exo_obs.fc)
       exo_obs.fc = exo_obs.fc[, names(which(unlist(exo_obs.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
+      exo_cols = colnames(exo_obs.fc)[colnames(exo_obs.fc) %in% c(paste0("obs.", colnames(ssm[["betaO"]])), colnames(ssm[["betaO"]]))]
+      exo_obs.fc = exo_obs.fc[, c(exo_cols), with = FALSE]
+      setcolorder(exo_obs.fc, exo_cols)
       Xo = cbind(Xo, t(exo_obs.fc))
       if(ncol(Xo) != length(y) + n.ahead){
         stop("nrow of exo_obs + exo_obs.fc does not equal length of y + n.ahead.")
@@ -147,6 +166,9 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
     }else{
       exo_state.fc = as.data.table(exo_state.fc)
       exo_state.fc = exo_state.fc[, names(which(unlist(exo_state.fc[, lapply(.SD, is.numeric)]))), with = FALSE]
+      exo_cols = colnames(exo_state.fc)[colnames(exo_state.fc) %in% c(paste0("state.", colnames(ssm[["betaS"]])), colnames(ssm[["betaS"]]))]
+      exo_state.fc = exo_state.fc[, c(exo_cols), with = FALSE]
+      setcolorder(exo_state.fc, exo_cols)
       Xs = cbind(Xs, t(exo_state.fc))
       if(ncol(Xs) != length(y) + n.ahead){
         stop("nrow of exo_state + exo_state.fc does not equal length of y + n.ahead.")
@@ -166,16 +188,6 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
     }
   }
 
-  #Apply multiplicative model
-  if(model$multiplicative == TRUE){
-    y = log(y)
-  }
-
-  #Standardize
-  mean = mean(y, na.rm = TRUE)
-  sd = stats::sd(y, na.rm = TRUE)
-  y = (y - mean)/sd
-
   #Get the seasons
   if(!is.na(model$seasons)){
     seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
@@ -187,7 +199,6 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
   par = eval(parse(text = paste0("c(", model$coef, ")")))
 
   #Filter and smooth the data
-  ssm = stsm_ssm(yt = y, model = model)
   if(!is.na(model$interpolate)){
     int_per = ssm[["int_per"]]
     n.ahead = n.ahead*int_per

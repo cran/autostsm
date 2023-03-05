@@ -1,3 +1,9 @@
+#autostsm 3.1
+
+## Minor changes
+
+* bug fixes involving exogenous inputs
+
 #autostsm 3.0.4
 
 ## Minor changes

@@ -107,14 +107,18 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     Xo[is.na(Xo)] = 0
     rownames(Xo) = "Xo"
   }else{
-    Xo = t(exo[, grepl("obs\\.", colnames(exo)), with = FALSE])
+    Xo = exo[, paste0("obs.", colnames(ssm[["betaO"]])), with = FALSE]
+    setcolorder(Xo, paste0("obs.", colnames(ssm[["betaO"]])))
+    Xo = t(Xo)
   }
   if(is.null(exo_state)){
     Xs = t(matrix(0, nrow = length(y), ncol = 1))
     Xs[is.na(Xs)] = 0
     rownames(Xs) = "Xs"
   }else{
-    Xs = t(exo[, grepl("state\\.", colnames(exo)), with = FALSE])
+    Xs = exo[, paste0("state.", colnames(ssm[["betaS"]])), with = FALSE]
+    setcolorder(Xs, paste0("state.", colnames(ssm[["betaS"]])))
+    Xs = t(Xs)
   }
   
   #Apply multiplicative model

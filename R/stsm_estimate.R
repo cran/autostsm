@@ -102,12 +102,12 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
   #arma = c(p = NA, q = NA)
   #optim_methods = "BFGS"
   #maxit = 10000
-  #verbose = TRUE
+  # verbose = TRUE
   # for(i in list.files(path = "R", pattern = ".R", full.names = T)){
   #   tryCatch(source(i), error = function(err){NULL})
   # }
-  # Rcpp::sourceCpp("src/kalmanfilter.cpp")
-
+  # library(kalmanfilter)
+  
   #Argument checks
   if(any(!optim_methods %in% c("NR", "BFGS", "BHHH", "SANN", "CG", "NM")) | length(optim_methods) < 1){
     stop("optim_methods must be a vector containing 'NR', 'BFGS', 'BHHH', 'SANN', 'CG', and/or 'NM'")
@@ -404,19 +404,6 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
     fixed = c(fixed, "lambda")
   }
   
-  #Set the exogenous matrices
-  if(is.null(exo)){
-    X = t(matrix(0, nrow = length(y), ncol = 2))
-    rownames(X) = c("obs.Xo", "state.Xs")
-  }else{
-    X = t(exo)
-  }
-  Xo = matrix(X[grepl("obs\\.", rownames(X))], nrow = sum(grepl("obs\\.", rownames(X))), ncol = length(y), 
-              dimnames = list(rownames(X)[grepl("obs\\.", rownames(X))], NULL))
-  Xs = matrix(X[grepl("state\\.", rownames(X))], nrow = sum(grepl("state\\.", rownames(X))), ncol = length(y), 
-              dimnames = list(rownames(X)[grepl("state\\.", rownames(X))], NULL))
-  yt = matrix(y, nrow = 1)
-  
   ###### Initial values for the unobserved components #####
   ssm = stsm_ssm(par, y, decomp, trend, init = NULL, prior = prior, freq = freq, seasons = seasons, 
                  interpolate = interpolate, interpolate_method = interpolate_method)
@@ -427,6 +414,42 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
     fixed = c(fixed, "sig_e")
     det_obs = TRUE
   }
+  
+  #Set the exogenous matrices
+  if(is.null(exo)){
+    X = t(matrix(0, nrow = length(y), ncol = 2))
+    rownames(X) = c("obs.Xo", "state.Xs")
+  }else{
+    X = t(exo)
+  }
+  Xo = matrix(X[grepl("obs\\.", rownames(X))], nrow = sum(grepl("obs\\.", rownames(X))), ncol = length(y), 
+              dimnames = list(rownames(X)[grepl("obs\\.", rownames(X))], NULL))
+  if(nrow(Xo) == 0){
+    Xo = NULL
+  }else{
+    Xo = matrix(Xo[paste0("obs.", colnames(ssm[["betaO"]])), ],
+                nrow = ncol(ssm[["betaO"]]), ncol = ncol(Xo),
+                dimnames = list(colnames(ssm[["betaO"]]), colnames(Xo)))
+  }
+  
+  Xs = matrix(X[grepl("state\\.", rownames(X))], nrow = sum(grepl("state\\.", rownames(X))), ncol = length(y), 
+              dimnames = list(rownames(X)[grepl("state\\.", rownames(X))], NULL))
+  if(nrow(Xs) == 0){
+    Xs = NULL
+  }else{
+    Xs = matrix(Xs[paste0("state.", colnames(ssm[["betaS"]])), ],
+               nrow = ncol(ssm[["betaS"]]), ncol = ncol(Xs),
+               dimnames = list(colnames(ssm[["betaS"]]), colnames(Xs)))
+  }
+  if(!is.null(state_eqns)){
+    exo_state_vars = trimws(unlist(lapply(state_eqns, function(x){
+      strsplit(strsplit(x, "\\~")[[1]][2], "\\+|\\-")[[1]][1]
+    })))
+    Xs =  matrix(Xs[exo_state_vars, ], 
+                 nrow = length(exo_state_vars), ncol = ncol(Xs), 
+                 dimnames = list(exo_state_vars, colnames(Xs)))
+  }
+  yt = matrix(y, nrow = 1)
   
   ##### Inequality constraints: ineqA %*% par + ineqB > 0 => ineqA %*% par > -ineqB #####
   constraints = stsm_constraints(prior, par, freq, unconstrained, det_trend, det_drift, det_cycle, det_seas, det_obs, saturating_growth)

@@ -195,8 +195,10 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
       mat = rbindlist(lapply(mat, function(x){x[["table"]]}), use.names = TRUE, fill = TRUE)[, "rn" := unlist(lapply(mat, function(x){x[["name"]]}))]
       mat = as.matrix(merge(data.table(rn = rownames(Fm)), mat, by = "rn", all = TRUE, sort = FALSE), rownames = "rn")
       colnames(mat) = gsub("state\\.", "", colnames(mat))
-      mat["Cts_0", ] = mat["Ct_0", ]
-      mat[grepl("Sts\\d+", rownames(mat)), ] = mat[grepl("St\\d+", rownames(mat)), ]
+      if(cycle != "arma"){
+        mat["Cts_0", ] = mat["Ct_0", ]
+        mat[grepl("Sts\\d+", rownames(mat)), ] = mat[grepl("St\\d+", rownames(mat)), ]
+      }
       cols = unique(gsub("state\\.", "", colnames(exo)[grepl("state\\.", colnames(exo))]))
       par = c(par, unname(c(mat[, colnames(mat) %in% cols])))
       names(par)[names(par) == ""] = unlist(lapply(colnames(mat)[colnames(mat) %in% cols], function(x){
