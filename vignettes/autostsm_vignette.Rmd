@@ -237,7 +237,7 @@ $$
 Second, is the prediction of the covariance matrix of the state components
 
 $$
-P_{t|t-1} = F P_{t_1|t-1} F^{\prime} + Q
+P_{t|t-1} = F P_{t-1|t-1} F^{\prime} + Q
 $$
 
 Third, is the prediction error of the time series of interest
@@ -267,7 +267,7 @@ $$
 The last equation is the updating of the covariance matrix of the unobserved components
 
 $$
-P_{t|t} = P_{t|t-1} - K_t H^{\prime} P_{t|t-1}
+P_{t|t} = P_{t|t-1} - K_t H P_{t|t-1}
 $$
 The seven equations above, make up the full Kalman filter routine. If $Y_t$ is missing for any observation, then 
 

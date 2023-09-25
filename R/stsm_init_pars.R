@@ -140,17 +140,21 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
                      interpolate = interpolate, interpolate_method = interpolate_method)
       
       Fm = ssm[["Fm"]]
-      colnames(Fm)[colnames(Fm) == "Tt_1"] = "trend.l1"
-      colnames(Fm)[colnames(Fm) == "Tt_2"] = "trend.l2"
-      colnames(Fm)[colnames(Fm) == "Dt_1"] = "drift.l1"
-      colnames(Fm)[colnames(Fm) == "Ct_1"] = "cycle.l1"
-      colnames(Fm)[grepl("St\\d+", colnames(Fm))] = gsub("_1", ".l1", gsub("St", "seasonal", colnames(Fm)[grepl("St\\d+", colnames(Fm))]))
+      colnames(Fm)[grepl("^Tt_\\d+$", colnames(Fm))] = 
+        gsub("^Tt_", "trend.l", colnames(Fm)[grepl("^Tt_\\d+$", colnames(Fm))])
+      colnames(Fm)[grepl("^Dt_\\d+$", colnames(Fm))] = 
+        gsub("^Dt_", "drift.l", colnames(Fm)[grepl("^Dt_\\d+$", colnames(Fm))])
+      colnames(Fm)[grepl("^Ct_\\d+$", colnames(Fm))] = 
+        gsub("^Ct_", "cycle.l", colnames(Fm)[grepl("^Ct_\\d+$", colnames(Fm))])
+      colnames(Fm)[grepl("^St\\d+", colnames(Fm))] = 
+        gsub("\\_", "\\.l", gsub("St", "seasonal", colnames(Fm)[grepl("^St\\d+", colnames(Fm))]))
       
       lag = max(unlist(lapply(strsplit(colnames(Fm), "\\.l"), function(x){as.numeric(x[2])})), na.rm = TRUE)
+      cols = copy(colnames(prior))
       for(i in 1:lag){
-        prior[, paste0(colnames(prior), ".l", i) := lapply(.SD, function(x){
+        prior[, paste0(cols, ".l", i) := lapply(.SD, function(x){
           shift(x, type = "lag", n = i)
-        }), .SDcols = colnames(prior)]
+        }), .SDcols = c(cols)]
       }
       
       if(is.null(state_eqns)){
@@ -184,7 +188,7 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
           })), collapse = " + "))
           eqn = gsub("\\+1|\\+ 1", "- 1", eqn)
         }
-        eqn2 = c(names(which(Fm[x, ] != 0 & !grepl("Cts|Sts", colnames(Fm)))))
+        eqn2 = c(names(which(Fm[x, ] != 0 & !grepl("^Cts|^Sts", colnames(Fm)))))
         eqn = paste(trimws(strsplit(eqn, "~")[[1]][1]), "~", 
                     paste(eqn2, collapse = " + "), "+", 
                     trimws(strsplit(eqn, "~")[[1]][2]))
@@ -195,10 +199,11 @@ stsm_init_pars = function(y, freq, trend, cycle, decomp = "", seasons = NULL, pr
       mat = rbindlist(lapply(mat, function(x){x[["table"]]}), use.names = TRUE, fill = TRUE)[, "rn" := unlist(lapply(mat, function(x){x[["name"]]}))]
       mat = as.matrix(merge(data.table(rn = rownames(Fm)), mat, by = "rn", all = TRUE, sort = FALSE), rownames = "rn")
       colnames(mat) = gsub("state\\.", "", colnames(mat))
-      if(cycle != "arma"){
+      if("Cts_0" %in% rownames(mat)){
         mat["Cts_0", ] = mat["Ct_0", ]
-        mat[grepl("Sts\\d+", rownames(mat)), ] = mat[grepl("St\\d+", rownames(mat)), ]
       }
+      mat[grepl("^Sts\\d+", rownames(mat)), ] = mat[grepl("^St\\d+", rownames(mat)), ]
+      
       cols = unique(gsub("state\\.", "", colnames(exo)[grepl("state\\.", colnames(exo))]))
       par = c(par, unname(c(mat[, colnames(mat) %in% cols])))
       names(par)[names(par) == ""] = unlist(lapply(colnames(mat)[colnames(mat) %in% cols], function(x){

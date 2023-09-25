@@ -1,8 +1,8 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 3.1.0
-Date: 2023-03-01
+Version: 3.1.2
+Date: 2023-10-01
 Authors@R: 
   c(person(given = "Alex", 
            family = "Hubbard", 
@@ -18,14 +18,14 @@ Imports: maxLik (>= 1.5-2), forecast (>= 8.15), lubridate (>= 1.7),
         lmtest (>= 0.9-38), ggrepel(>= 0.9), progress (>= 1.2),
         sandwich (>= 3.0), data.table (>= 1.14), kalmanfilter (>=
         2.0.1)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2023-03-05 00:12:31 UTC; alex.hubbard
+Packaged: 2023-09-25 20:43:40 UTC; alex.hubbard
 Author: Alex Hubbard [aut, cre]
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Depends: R (>= 3.5.0)
 Repository: CRAN
-Date/Publication: 2023-03-05 06:20:02 UTC
+Date/Publication: 2023-09-25 21:50:02 UTC

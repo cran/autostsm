@@ -13,7 +13,9 @@ stsm_filter(
   ci = 0.8,
   plot = FALSE,
   plot.decomp = FALSE,
-  smooth = TRUE
+  n.hist = NULL,
+  smooth = TRUE,
+  dampen_cycle = FALSE
 )
 }
 \arguments{
@@ -33,7 +35,11 @@ stsm_filter(
 
 \item{plot.decomp}{Logical, whether to plot the filtered historical data}
 
+\item{n.hist}{Number of historical periods to include in the forecast plot. If plot = TRUE and n.hist = NULL, defaults to 3 years.}
+
 \item{smooth}{Whether or not to use the Kalman smoother}
+
+\item{dampen_cycle}{Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence}
 }
 \value{
 data table (or list of data tables) containing the filtered and/or smoothed series.

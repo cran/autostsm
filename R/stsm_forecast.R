@@ -385,7 +385,31 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
     y.fc = NULL
     dates.fc = NULL
   }
-
+  
+  #Calculate the estimated time 0 series
+  if(smooth == FALSE){
+    vars = unique(unlist(lapply(strsplit(rownames(ssm[["Fm"]]), "_"), function(x){x[1]})))
+    lags = lapply(vars, function(x){
+      l = rownames(ssm[["Fm"]])[grepl(paste0("^", x), rownames(ssm[["Fm"]]))]
+      l = as.numeric(unlist(lapply(strsplit(l, "_"), function(y){y[2]})))
+      return(l[l > 0])
+    })
+    names(lags) = vars
+    lags = lags[sapply(lags, function(x){length(x) > 0})]
+    if(length(lags) > 0){
+      for(i in names(lags)){
+        for(j in sort(lags[[i]])){
+          var = colnames(series)[grepl(paste0("^", i), colnames(series)) & 
+                                   grepl(paste0("_", j, "$"), colnames(series))]
+          series[, c(var) := lapply(.SD, function(x){shift(x, type = "lead", n = j)}), 
+                 .SDcols = c(var)]
+          col0 = colnames(series)[grepl(strsplit(var, "_")[[1]][1], colnames(series)) & grepl("_0", colnames(series))]
+          series[!is.na(eval(parse(text = var))), c(col0) := eval(parse(text = var))]
+        }
+      }
+    }
+  }
+  
   #Set the trend
   if(!"Tt_0" %in% colnames(series)){
     series[, "trend" := 0]
@@ -588,6 +612,8 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
 #' @param plot Logical, whether to plot everything
 #' @param plot.decomp Logical, whether to plot the filtered historical data
 #' @param smooth Whether or not to use the Kalman smoother
+#' @param n.hist Number of historical periods to include in the forecast plot. If plot = TRUE and n.hist = NULL, defaults to 3 years.
+#' @param dampen_cycle Whether to remove oscillating cycle dynamics and smooth the cycle forecast into the trend using a sigmoid function that maintains the rate of convergence
 #' @import data.table ggplot2 kalmanfilter
 #' @return data table (or list of data tables) containing the filtered and/or smoothed series.
 #' @examples
@@ -605,10 +631,11 @@ stsm_forecast = function(model, y, n.ahead = 0, freq = NULL, exo_obs = NULL, exo
 #' }
 #' @export
 stsm_filter = function(model, y, freq = NULL, exo_obs = NULL, exo_state = NULL, ci = 0.8,
-                       plot = FALSE, plot.decomp = FALSE, smooth = TRUE){
-  stsm = stsm_forecast(model, y, n.ahead = 0, freq = NULL, exo_obs = exo_obs, exo_state = exo_state,
-                       exo_obs.fc = NULL, exo_state.fc = NULL, ci = 0.8,
+                       plot = FALSE, plot.decomp = FALSE, 
+                       n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE){
+  stsm = stsm_forecast(model, y, n.ahead = 0, freq = freq, exo_obs = exo_obs, exo_state = exo_state, 
+                       ci = ci, exo_obs.fc = NULL, exo_state.fc = NULL, 
                        plot = plot, plot.decomp = plot.decomp, plot.fc = FALSE,
-                       n.hist = NULL, smooth = TRUE, dampen_cycle = FALSE)
+                       n.hist = n.hist, smooth = smooth, dampen_cycle = dampen_cycle)
   return(stsm)
 }

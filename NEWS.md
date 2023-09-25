@@ -1,3 +1,19 @@
+#autostsm 3.1.1
+
+## Minor changes
+
+* using sentinel "_PACKAGE"
+
+#autostsm 3.1.1
+
+## Major changes
+
+updated to fix issue calculating unobserved series at time 0 when there are lags
+
+## Minor changes
+
+* bug fixes involving exogenous inputs
+
 #autostsm 3.1
 
 ## Minor changes
