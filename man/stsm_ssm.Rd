@@ -54,7 +54,7 @@ List of space space matrices
 \description{
 Creates a state space model in list form
 yt = H*B + B^O X^O_t + e_t
-B = F*B_{t-1} + B^S X^S_t + u_t
+B = F*B_\{t-1\} + B^S X^S_t + u_t
 }
 \examples{
 \dontrun{

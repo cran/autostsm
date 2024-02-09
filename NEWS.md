@@ -1,4 +1,10 @@
-#autostsm 3.1.1
+#autostsm 3.1.3
+
+## Minor changes
+
+* bug fix to weekly seasonal detection
+
+#autostsm 3.1.2
 
 ## Minor changes
 

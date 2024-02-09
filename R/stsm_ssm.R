@@ -13,7 +13,7 @@ stsm_bdiag = function(A, B){
 #' 
 #' Creates a state space model in list form
 #' yt = H*B + B^O X^O_t + e_t
-#' B = F*B_{t-1} + B^S X^S_t + u_t
+#' B = F*B_\{t-1\} + B^S X^S_t + u_t
 #'
 #' @param par Vector of named parameter values, includes the harmonics
 #' @param yt Univariate time series of data values

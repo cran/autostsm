@@ -50,10 +50,11 @@ stsm_detect_frequency = function(y, freq = NULL){
     datecol = sapply(colnames(y), function(x){any(grepl(x, datecol))})
     datecol = names(which(datecol))
     if(length(datecol) == 1){
-      #Convert a yearmon column to a date column
-      if(any(class(y[, c(datecol), with = FALSE][[1]]) == "yearmon")){
+      #Convert a yearmon or yearqtr column to a date column
+      if(any(class(y[, c(datecol), with = FALSE][[1]]) %in% c("yearmon", "yearqtr"))){
         y[, c(datecol) := as.Date(eval(parse(text = datecol)))]
       }
+      
       
       #Make sure there is only one numeric column
       if(ncol(y[, colnames(y) != datecol, with = FALSE]) > 1){
@@ -71,13 +72,12 @@ stsm_detect_frequency = function(y, freq = NULL){
         #Calculate the day differences between subsequent dates and get the unique values
         y[, "diff" := difftime(eval(parse(text = datecol)), 
                                shift(eval(parse(text = datecol)), type = "lag", n = 1), units = "days")]
-        datediffs = unique(y$diff)
         
         #Get the most frequent date difference
         freq = as.numeric(sort(y[, .N, by = "diff"][N == max(N), ]$diff))[1]
         
         #Set the numeric frequency
-        if(any(freq %in% c(sum(floor(calendar$days)), sum(ceiling(calendar$days))))){
+        if(any(freq %in% unique(c(sum(floor(calendar$days)), sum(ceiling(calendar$days)))))){
           freq = 1
           name = "yearly"
         }else if(any(freq %in% unique(unlist(calendar[, .(sum(floor(days)), sum(ceiling(days))), by = "qtr"][, c("V1", "V2")])))){
@@ -86,12 +86,12 @@ stsm_detect_frequency = function(y, freq = NULL){
         }else if(any(freq %in% unique(c(floor(calendar$days), ceiling(calendar$days))))){
           freq = 12
           name = "monthly"
+        }else if(any(freq %in% 7)){
+          freq = 365.25/7
+          name = "weekly"
         }else if(any(freq %in% c(1, 3))){
           freq = 365.25
           name = "daily"
-        }else if(any(freq %in% c(52, 53))){
-          freq = 365.25/7
-          name = "weekly"
         }else if(any(freq %in% c(1/c(23, 24)))){
           freq = 365.25*24
           name = "hourly"

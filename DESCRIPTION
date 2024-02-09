@@ -1,8 +1,8 @@
 Package: autostsm
 Type: Package
 Title: Automatic Structural Time Series Models
-Version: 3.1.2
-Date: 2023-10-01
+Version: 3.1.3
+Date: 2024-02-01
 Authors@R: 
   c(person(given = "Alex", 
            family = "Hubbard", 
@@ -23,9 +23,9 @@ Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2023-09-25 20:43:40 UTC; alex.hubbard
+Packaged: 2024-02-08 17:27:03 UTC; alex.hubbard
 Author: Alex Hubbard [aut, cre]
 Maintainer: Alex Hubbard <hubbard.alex@gmail.com>
 Depends: R (>= 3.5.0)
 Repository: CRAN
-Date/Publication: 2023-09-25 21:50:02 UTC
+Date/Publication: 2024-02-09 00:30:19 UTC

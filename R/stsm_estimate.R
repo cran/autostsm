@@ -34,15 +34,15 @@
 #' "random-walk-drift" is the random walk with constant drift trend.
 #' "double-random-walk" is the random walk with random walk drift trend.
 #' "random-walk2" is a 2nd order random walk trend as in the Hodrick-Prescott filter.
-#' If trend is "random-walk", the trend model is T_t = T_{t-1} + e_t, 
+#' If trend is "random-walk", the trend model is T_t = T_\{t-1\} + e_t, 
 #' e_t ~ N(0, sig_t^2)
-#' If trend is "random-walk-drift", the trend model is T_t = T_{t-1} + D_{t-1} + e_t, 
+#' If trend is "random-walk-drift", the trend model is T_t = T_\{t-1\} + D_\{t-1\} + e_t, 
 #' e_t ~ N(0, sig_t^2) with
-#' D_t = d + phi_d*D_{t-1} + n_t, n_t ~ N(0, sig_d^2)
-#' If trend is "double-random-walk", the trend model is T_t = M_{t-1} + T_{t-1} + e_t, 
+#' D_t = d + phi_d*D_\{t-1\} + n_t, n_t ~ N(0, sig_d^2)
+#' If trend is "double-random-walk", the trend model is T_t = M_\{t-1\} + T_\{t-1\} + e_t, 
 #' e_t ~ N(0, sig_t^2) with
-#' M_t = M_{t-1} + n_t, n_t ~ N(0, sig_d^2)
-#' If trend is "random-walk2", the trend model is T_t = 2T_{t-1} - T_{t-2} + e_t, 
+#' M_t = M_\{t-1\} + n_t, n_t ~ N(0, sig_d^2)
+#' If trend is "random-walk2", the trend model is T_t = 2T_\{t-1\} - T_\{t-2\} + e_t, 
 #' e_t ~ N(0, sig_t^2)
 #' @param multiplicative If data should be logged to create a multiplicative model.
 #' If multiplicative = TRUE, then the data is logged and the original model becomes multiplicative 

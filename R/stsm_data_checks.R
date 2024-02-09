@@ -13,8 +13,8 @@ stsm_check_y = function(y){
     if(ncol(y) != 2){
       stop("y must have two columns")
     }else if(length(col_classes) < 2){
-      stop("y must habe a date and numeric column")
-    }else if(!all(col_classes %in% c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+      stop("y must have a date and numeric column")
+    }else if(!all(col_classes %in% c("Date", "yearmon", "yearqtr", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
       stop("y must have a date and numeric column")
     }
   }
@@ -37,8 +37,8 @@ stsm_check_exo = function(exo, y){
       if(nrow(exo) != nrow(y)){
         stop("exo and y must have the same number of rows")
       }else if(length(col_classes) < 2){
-        stop("exo must habe a date and numeric column")
-      }else if(!all(col_classes %in% c("Date", "yearmon", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
+        stop("exo must have a date and numeric column")
+      }else if(!all(col_classes %in% c("Date", "yearmon", "yearqtr", "POSIXct", "POSIXt", "POSIXlt", "numeric"))){
         stop("exo must have a date and numeric column")
       }
     }
