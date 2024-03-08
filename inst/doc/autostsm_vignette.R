@@ -90,9 +90,6 @@ knitr::opts_chunk$set(
 #                  by = "date", all = TRUE)
 
 ## -----------------------------------------------------------------------------
-#  library(autostsm)
-#  library(data.table)
-#  
 #  #Define the exogenous data
 #  exo_obs = data.table(date = ts$date, Xo = rnorm(nrow(ts)))
 #  exo_state = data.table(date = ts$date, Xs_trend = rnorm(nrow(ts)),
@@ -127,9 +124,6 @@ knitr::opts_chunk$set(
 #  
 
 ## -----------------------------------------------------------------------------
-#  library(autostsm)
-#  library(data.table)
-#  
 #  ##### Unemployment rate examples #####
 #  #Not seasonally adjusted
 #  data("UNRATENSA", package = "autostsm") #From FRED

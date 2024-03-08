@@ -1151,139 +1151,133 @@ detected if <code>plot = TRUE</code>.</p>
 </div>
 <div id="using-exogenous-data" class="section level2">
 <h2>Using Exogenous Data</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(autostsm)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#Define the exogenous data</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>exo_obs <span class="ot">=</span> <span class="fu">data.table</span>(<span class="at">date =</span> ts<span class="sc">$</span>date, <span class="at">Xo =</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(ts)))</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>exo_state <span class="ot">=</span> <span class="fu">data.table</span>(<span class="at">date =</span> ts<span class="sc">$</span>date, <span class="at">Xs_trend =</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(ts)), </span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>                       <span class="at">Xs_seasonal =</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(ts)))</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>exo_state[<span class="fu">seq</span>(<span class="dv">1</span>, .N, <span class="at">by =</span> <span class="dv">7</span>), <span class="st">&quot;Xs_seasonal&quot;</span> <span class="sc">:=</span> <span class="dv">1</span>]</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#Estimate the model</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>                     <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, </span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>                     <span class="at">state_eqns =</span> <span class="fu">c</span>(<span class="st">&quot;trend ~ Xs_trend - 1&quot;</span>, <span class="st">&quot;seasonal ~ Xs_seasonal - 1&quot;</span>), </span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>                     <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co">#Define the exogenous data</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>exo_obs <span class="ot">=</span> <span class="fu">data.table</span>(<span class="at">date =</span> ts<span class="sc">$</span>date, <span class="at">Xo =</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(ts)))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>exo_state <span class="ot">=</span> <span class="fu">data.table</span>(<span class="at">date =</span> ts<span class="sc">$</span>date, <span class="at">Xs_trend =</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(ts)), </span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                       <span class="at">Xs_seasonal =</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(ts)))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>exo_state[<span class="fu">seq</span>(<span class="dv">1</span>, .N, <span class="at">by =</span> <span class="dv">7</span>), <span class="st">&quot;Xs_seasonal&quot;</span> <span class="sc">:=</span> <span class="dv">1</span>]</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#Estimate the model</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>                     <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, </span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>                     <span class="at">state_eqns =</span> <span class="fu">c</span>(<span class="st">&quot;trend ~ Xs_trend - 1&quot;</span>, <span class="st">&quot;seasonal ~ Xs_seasonal - 1&quot;</span>), </span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>                     <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#Check the exogenous parameter estimates</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="fu">stsm_ssm</span>(<span class="at">model =</span> stsm)[<span class="fu">c</span>(<span class="st">&quot;betaO&quot;</span>, <span class="st">&quot;betaS&quot;</span>)]</span>
 <span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#Check the exogenous parameter estimates</span></span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="fu">stsm_ssm</span>(<span class="at">model =</span> stsm)[<span class="fu">c</span>(<span class="st">&quot;betaO&quot;</span>, <span class="st">&quot;betaS&quot;</span>)]</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#Filter and plot the results</span></span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_filter</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>                      <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#Detect anomalies</span></span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
-<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>                                       <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a></span>
-<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#Detect structural breaks</span></span>
-<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>                                   <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, </span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>                                   <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#Filter and plot the results</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_filter</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>                      <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#Detect anomalies</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>                                       <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#Detect structural breaks</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> ts[, <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">with =</span> <span class="cn">FALSE</span>], </span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>                                   <span class="at">exo_obs =</span> exo_obs, <span class="at">exo_state =</span> exo_state, </span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>                                   <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="real-data-decompositions" class="section level2">
 <h2>Real Data Decompositions</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(autostsm)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="do">##### Unemployment rate examples #####</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATENSA&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>UNRATENSA <span class="ot">=</span> <span class="fu">data.table</span>(UNRATENSA, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">colnames</span>(UNRATENSA) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATENSA, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="do">##### Unemployment rate examples #####</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATENSA&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>UNRATENSA <span class="ot">=</span> <span class="fu">data.table</span>(UNRATENSA, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">colnames</span>(UNRATENSA) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>UNRATENSA[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATENSA, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATENSA, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a></span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATE&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>UNRATE <span class="ot">=</span> <span class="fu">data.table</span>(UNRATE, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="fu">colnames</span>(UNRATE) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>UNRATE[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>UNRATE[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATE, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;UNRATE&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>UNRATE <span class="ot">=</span> <span class="fu">data.table</span>(UNRATE, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="fu">colnames</span>(UNRATE) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>UNRATE[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>UNRATE[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(UNRATE, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
 <span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> UNRATE, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="do">##### GDP examples #####</span></span>
-<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
-<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;NA000334Q&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a>NA000334Q <span class="ot">=</span> <span class="fu">data.table</span>(NA000334Q, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="fu">colnames</span>(NA000334Q) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a>NA000334Q <span class="ot">=</span> NA000334Q[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
-<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(NA000334Q, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="do">##### GDP examples #####</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#Not seasonally adjusted</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;NA000334Q&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a>NA000334Q <span class="ot">=</span> <span class="fu">data.table</span>(NA000334Q, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="fu">colnames</span>(NA000334Q) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a>NA000334Q[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a>NA000334Q <span class="ot">=</span> NA000334Q[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(NA000334Q, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
 <span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> NA000334Q, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a></span>
-<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
-<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;GDP&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a>GDP <span class="ot">=</span> <span class="fu">data.table</span>(GDP, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="fu">colnames</span>(GDP) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a>GDP[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a>GDP[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a>GDP <span class="ot">=</span> GDP[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
-<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(GDP, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> GDP, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#Seasonally adjusted</span></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;GDP&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a>GDP <span class="ot">=</span> <span class="fu">data.table</span>(GDP, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="fu">colnames</span>(GDP) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a>GDP[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a>GDP[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a>GDP <span class="ot">=</span> GDP[date <span class="sc">&gt;=</span> <span class="st">&quot;1990-01-01&quot;</span>, ]</span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(GDP, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> GDP, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
 <span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> GDP, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a></span>
-<span id="cb3-68"><a href="#cb3-68" tabindex="-1"></a><span class="do">##### S&amp;P 500 example #####</span></span>
-<span id="cb3-69"><a href="#cb3-69" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;SP500&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-70"><a href="#cb3-70" tabindex="-1"></a>SP500 <span class="ot">=</span> <span class="fu">data.table</span>(SP500, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-71"><a href="#cb3-71" tabindex="-1"></a><span class="fu">colnames</span>(SP500) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-72"><a href="#cb3-72" tabindex="-1"></a>SP500[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-73"><a href="#cb3-73" tabindex="-1"></a>SP500[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-74"><a href="#cb3-74" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(SP500, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-75"><a href="#cb3-75" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> SP500, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a></span>
+<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="do">##### S&amp;P 500 example #####</span></span>
+<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;SP500&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a>SP500 <span class="ot">=</span> <span class="fu">data.table</span>(SP500, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-68"><a href="#cb3-68" tabindex="-1"></a><span class="fu">colnames</span>(SP500) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-69"><a href="#cb3-69" tabindex="-1"></a>SP500[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-70"><a href="#cb3-70" tabindex="-1"></a>SP500[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-71"><a href="#cb3-71" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(SP500, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-72"><a href="#cb3-72" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> SP500, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-73"><a href="#cb3-73" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-74"><a href="#cb3-74" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-75"><a href="#cb3-75" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-76"><a href="#cb3-76" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-77"><a href="#cb3-77" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-77"><a href="#cb3-77" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
 <span id="cb3-78"><a href="#cb3-78" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-79"><a href="#cb3-79" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-80"><a href="#cb3-80" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> SP500, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-81"><a href="#cb3-81" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-82"><a href="#cb3-82" tabindex="-1"></a></span>
-<span id="cb3-83"><a href="#cb3-83" tabindex="-1"></a><span class="do">##### 5 Year Treasury Yield example #####</span></span>
-<span id="cb3-84"><a href="#cb3-84" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;DGS5&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
-<span id="cb3-85"><a href="#cb3-85" tabindex="-1"></a>DGS5 <span class="ot">=</span> <span class="fu">data.table</span>(DGS5, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-86"><a href="#cb3-86" tabindex="-1"></a><span class="fu">colnames</span>(DGS5) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb3-87"><a href="#cb3-87" tabindex="-1"></a>DGS5[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
-<span id="cb3-88"><a href="#cb3-88" tabindex="-1"></a>DGS5[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
-<span id="cb3-89"><a href="#cb3-89" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(DGS5, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-90"><a href="#cb3-90" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-79"><a href="#cb3-79" tabindex="-1"></a></span>
+<span id="cb3-80"><a href="#cb3-80" tabindex="-1"></a><span class="do">##### 5 Year Treasury Yield example #####</span></span>
+<span id="cb3-81"><a href="#cb3-81" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;DGS5&quot;</span>, <span class="at">package =</span> <span class="st">&quot;autostsm&quot;</span>) <span class="co">#From FRED</span></span>
+<span id="cb3-82"><a href="#cb3-82" tabindex="-1"></a>DGS5 <span class="ot">=</span> <span class="fu">data.table</span>(DGS5, <span class="at">keep.rownames =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-83"><a href="#cb3-83" tabindex="-1"></a><span class="fu">colnames</span>(DGS5) <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb3-84"><a href="#cb3-84" tabindex="-1"></a>DGS5[, <span class="st">&quot;date&quot;</span> <span class="sc">:=</span> <span class="fu">as.Date</span>(date)]</span>
+<span id="cb3-85"><a href="#cb3-85" tabindex="-1"></a>DGS5[, <span class="st">&quot;y&quot;</span> <span class="sc">:=</span> <span class="fu">as.numeric</span>(y)]</span>
+<span id="cb3-86"><a href="#cb3-86" tabindex="-1"></a>stsm <span class="ot">=</span> <span class="fu">stsm_estimate</span>(DGS5, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-87"><a href="#cb3-87" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">stsm_forecast</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">n.ahead =</span> <span class="fu">floor</span>(stsm<span class="sc">$</span>freq)<span class="sc">*</span><span class="dv">3</span>, <span class="at">plot =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-88"><a href="#cb3-88" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
+<span id="cb3-89"><a href="#cb3-89" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-90"><a href="#cb3-90" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-91"><a href="#cb3-91" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-92"><a href="#cb3-92" tabindex="-1"></a>                <span class="fu">stsm_detect_anomalies</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">plot =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-93"><a href="#cb3-93" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-94"><a href="#cb3-94" tabindex="-1"></a>stsm_fc <span class="ot">=</span> <span class="fu">merge</span>(stsm_fc, </span>
-<span id="cb3-95"><a href="#cb3-95" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-96"><a href="#cb3-96" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<span id="cb3-92"><a href="#cb3-92" tabindex="-1"></a>                <span class="fu">stsm_detect_breaks</span>(stsm, <span class="at">y =</span> DGS5, <span class="at">plot =</span> <span class="cn">TRUE</span>, <span class="at">show_progress =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-93"><a href="#cb3-93" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">&quot;date&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="simulated-data-interpolation" class="section level2">
 <h2>Simulated Data Interpolation</h2>

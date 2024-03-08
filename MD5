@@ -1,6 +1,6 @@
-2eaf1efc80ab2dd610315b51c0c5c4f4 *DESCRIPTION
+64a715f7b1f5b77e94e49f01e03f8d1e *DESCRIPTION
 3340ce0da15129120f4d78cfa4d35e32 *NAMESPACE
-90385789b9364ee9f4a8b7cfb138a501 *NEWS.md
+438ae8596877f52c53f934c9b2645097 *NEWS.md
 1b54137d4ae82b40a266122de6d1201b *R/autostsm-package.R
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
@@ -8,7 +8,7 @@ a328332b1c42d73bb061f2052688fa51 *R/stsm_constraints.R
 8c47b6a6209763b4bb4655eafc7ec4db *R/stsm_data_checks.R
 067cce414fed56799f8005bd0ab87b08 *R/stsm_dates_to_interpolate.R
 52606bc10e3af4097a14a85909302eeb *R/stsm_detect_anomalies.R
-f47e4e976df321717e04eb2434a47e9a *R/stsm_detect_breaks.R
+bca79c3fa5c39a71be924a226682c048 *R/stsm_detect_breaks.R
 a84d6dac9503c22699bc648323d14dd3 *R/stsm_detect_cycle.R
 d4cce2cb962935ccf946b87ed550c8d9 *R/stsm_detect_frequency.R
 61c5b8f95641073bdd8ebdc145e2dc83 *R/stsm_detect_multiplicative.R
@@ -31,9 +31,9 @@ a8cb9db6a167d40c04693bd1d00f2a46 *data/GDP.RData
 4d8c16ff5e0466d6dd95ce7dba48ceaf *data/SP500.RData
 cdc27ae837de93c0c12c6cd541102bba *data/UNRATE.RData
 fb61b19775a81a942c3309055ba4fa36 *data/UNRATENSA.RData
-6d504fc7b635e2bf934020832363a5ca *inst/doc/autostsm_vignette.R
-d4382c22b419294dcd7db982528c2fa9 *inst/doc/autostsm_vignette.Rmd
-b4f5f5eb2bb827a7e08834ddfd2ce546 *inst/doc/autostsm_vignette.html
+d9cb524c05108a39589cee17feae8462 *inst/doc/autostsm_vignette.R
+947c8a434d897f6b6f589aba45c518be *inst/doc/autostsm_vignette.Rmd
+de4c9953606e704fb8d46a5c833014d0 *inst/doc/autostsm_vignette.html
 524220eba90cfec04da2f44ff0dbd244 *man/DGS5.Rd
 0c7705eb22ec5b94fcd7e6803a68b26d *man/GDP.Rd
 02d0083698b306e5565a2df9b924a213 *man/NA000334Q.Rd
@@ -65,4 +65,4 @@ d25c0ae7ea50b1d163ce896eb053e0ae *man/stsm_format_exo.Rd
 c2f5ecdf7b08943d7a65feb579f8aedf *man/stsm_na_kalman.Rd
 39fc931a5752260526cc96c1f3e8dfcc *man/stsm_prior.Rd
 24812e0cec3db9f9a56270d2fc5a5cbd *man/stsm_ssm.Rd
-d4382c22b419294dcd7db982528c2fa9 *vignettes/autostsm_vignette.Rmd
+947c8a434d897f6b6f589aba45c518be *vignettes/autostsm_vignette.Rmd

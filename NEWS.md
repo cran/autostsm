@@ -1,3 +1,9 @@
+#autostsm 3.1.4
+
+## Minor changes
+
+* bug fix to structural break detection with exogenous data
+
 #autostsm 3.1.3
 
 ## Minor changes

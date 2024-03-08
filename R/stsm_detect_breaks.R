@@ -101,6 +101,24 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
   dates = dates[range[1]:range[length(range)]]
   exo = stsm_format_exo(exo_obs, exo_state, dates, range)
   
+  #Apply multiplicative model
+  if(model$multiplicative == TRUE){
+    y = log(y)
+  }
+  
+  #Standardize
+  mean = mean(y, na.rm = TRUE)
+  sd = stats::sd(y, na.rm = TRUE)
+  y = (y - mean)/sd
+  
+  #Get model seasons
+  if(!is.na(model$seasons)){
+    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
+  }else{
+    seasons = c()
+  }
+  ssm = stsm_ssm(yt = y, model = model)
+  
   #Set the historical exogenous variables
   if(is.null(exo_obs)){
     Xo = t(matrix(0, nrow = length(y), ncol = 1))
@@ -121,25 +139,7 @@ stsm_detect_breaks = function(model, y, components = c("trend", "cycle", "season
     Xs = t(Xs)
   }
   
-  #Apply multiplicative model
-  if(model$multiplicative == TRUE){
-    y = log(y)
-  }
-  
-  #Standardize
-  mean = mean(y, na.rm = TRUE)
-  sd = stats::sd(y, na.rm = TRUE)
-  y = (y - mean)/sd
-  
-  #Get model seasons
-  if(!is.na(model$seasons)){
-    seasons = as.numeric(strsplit(model$seasons, ", ")[[1]])
-  }else{
-    seasons = c()
-  }
-  
   #Filter and smooth the data
-  ssm = stsm_ssm(yt = y, model = model)
   msg = utils::capture.output(B_tt <- kalman_filter(ssm, matrix(y, nrow = 1), Xo, Xs, smooth = smooth)$B_tt, type = "message")
   rownames(B_tt) = rownames(ssm[["Fm"]])
   
