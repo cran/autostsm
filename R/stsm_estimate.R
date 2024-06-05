@@ -248,6 +248,9 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
   #Set up parallel computing
   if(is.null(cores)){
     cores = parallel::detectCores()
+    if(verbose == TRUE){
+      message("Setting up parallel computing...")
+    }
   }
   cl = tryCatch(parallel::makeCluster(max(c(1, cores))),
                 error = function(err){
@@ -499,9 +502,11 @@ stsm_estimate = function(y, exo_obs = NULL, exo_state = NULL, state_eqns = NULL,
   aic = as.numeric(2*k - 2*stats::logLik(out))
   aicc = as.numeric(aic + (2*k^2 + 2*k)/(n - k - 1))
   bic = as.numeric(k*log(n) - 2*stats::logLik(out))
+  cycle_length = 2*pi/out$estimate[grepl("lambda", names(out$estimate))]
   fit = suppressWarnings(data.table(trend = trend, freq = freq, freq_name = freq_name, standard_freq = standard_freq,
                                     seasons = paste(seasons, collapse = ", "),
-                                    cycle = 2*pi/out$estimate[grepl("lambda", names(out$estimate))],
+                                    cycle = ifelse(length(cycle_length) == 0, NA, cycle_length),
+                                    cycle_type = ifelse(is.numeric(cycle), "trig", cycle),
                                     decomp = decomp, multiplicative = multiplicative, 
                                     interpolate = interpolate, interpolate_method = interpolate_method,
                                     convergence = (out$code == 0), 

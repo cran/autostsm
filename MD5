@@ -1,6 +1,6 @@
-64a715f7b1f5b77e94e49f01e03f8d1e *DESCRIPTION
+35086a8640cd7581daf0b46ec41fe5b0 *DESCRIPTION
 3340ce0da15129120f4d78cfa4d35e32 *NAMESPACE
-438ae8596877f52c53f934c9b2645097 *NEWS.md
+ecca2b98abc14ba0792c7f3774a17c99 *NEWS.md
 1b54137d4ae82b40a266122de6d1201b *R/autostsm-package.R
 0ee9ae757c90b8931ead1a956dd9cbcc *R/data.R
 b389d01b431c4e46045cef4a566470fb *R/stsm_build_dates.R
@@ -14,7 +14,7 @@ d4cce2cb962935ccf946b87ed550c8d9 *R/stsm_detect_frequency.R
 61c5b8f95641073bdd8ebdc145e2dc83 *R/stsm_detect_multiplicative.R
 4466f19007b59b99b2c460cae32e74f4 *R/stsm_detect_seasonality.R
 7110f0fb997d61f1519931c49044a4ee *R/stsm_detect_trend.R
-575afdfd3eb2814647e16ee258862006 *R/stsm_estimate.R
+adacc88bb8657ef2a81f11375ca7478c *R/stsm_estimate.R
 2d8f09e7c7b3d4c76f1db8b309cd75c0 *R/stsm_fixed_pars.R
 65b0b0bc3ccf9d52a42962563545d8d5 *R/stsm_forecast.R
 80239a4ab84596fce91314bb8526d3c4 *R/stsm_init_pars.R

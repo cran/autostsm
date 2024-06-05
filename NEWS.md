@@ -1,3 +1,9 @@
+#autostsm 3.1.5
+
+## Minor changes
+
+* bug fix to work with data.table >= 1.15
+
 #autostsm 3.1.4
 
 ## Minor changes
